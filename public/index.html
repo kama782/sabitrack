@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SabiTrack — Поиск нянь</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<style>
+:root{--pink-50:#fff5f7;--pink-100:#ffe4eb;--pink-200:#ffc2d1;--pink-400:#ff6b96;--pink-500:#e84a78;--pink-600:#c73461;--pink-700:#9c2248;--cream:#fdf8f9;--text-dark:#2d1a22;--text-mid:#6b3d52;--text-muted:#a07080;--border:rgba(200,120,150,0.18);--border-strong:rgba(200,120,150,0.32);--shadow-soft:0 2px 20px rgba(180,80,120,0.07);--shadow-card:0 4px 32px rgba(180,80,120,0.11);--r-sm:10px;--r-md:14px;--r-lg:20px;--r-xl:28px;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text-dark);min-height:100vh;overflow-x:hidden;}
+.topbar{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:14px 32px;background:rgba(253,248,249,0.92);backdrop-filter:blur(18px);border-bottom:1px solid var(--border);}
+.logo{font-family:'DM Serif Display',serif;font-size:22px;}.logo span{color:var(--pink-500);font-style:italic;}
+.role-badge{display:inline-flex;align-items:center;gap:7px;padding:6px 16px;border-radius:40px;font-size:13px;font-weight:500;border:1.5px solid;}
+.role-badge .dot{width:7px;height:7px;border-radius:50%;}
+.role-badge-parent{background:#eef4ff;color:#1a4fb5;border-color:#b8d0f8;}.role-badge-parent .dot{background:#2563eb;}
+.role-badge-nanny{background:#edfbf1;color:#166534;border-color:#a7e9c0;}.role-badge-nanny .dot{background:#16a34a;}
+.role-badge-admin{background:#fff0f0;color:#991b1b;border-color:#fca5a5;}.role-badge-admin .dot{background:#dc2626;}
+.user-chip{display:flex;align-items:center;gap:9px;font-size:14px;color:var(--text-mid);}
+.user-avatar{width:34px;height:34px;border-radius:50%;background:var(--pink-200);color:var(--pink-700);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;}
+/* balance chip in topbar */
+.balance-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:40px;background:#fff;border:1.5px solid #a7e9c0;font-size:13px;font-weight:600;color:#166534;cursor:pointer;transition:all .18s;}
+.balance-chip:hover{background:#edfbf1;}
+.balance-chip.low{border-color:#fca5a5;color:#991b1b;}
+.layout{display:flex;min-height:calc(100vh - 61px);}
+.sidebar{width:220px;flex-shrink:0;background:var(--pink-50);border-right:1px solid var(--border);padding:24px 14px;display:flex;flex-direction:column;gap:3px;}
+.nav-section{font-size:11px;font-weight:600;letter-spacing:.8px;color:var(--text-muted);text-transform:uppercase;padding:14px 12px 6px;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--r-sm);font-size:14px;color:var(--text-mid);cursor:pointer;transition:all .18s;border:none;background:transparent;width:100%;text-align:left;}
+.nav-item:hover{background:var(--pink-100);color:var(--pink-600);}
+.nav-item.active{background:var(--pink-200);color:var(--pink-700);font-weight:600;}
+.nav-icon{font-size:15px;width:20px;text-align:center;}
+.main{flex:1;padding:32px;overflow-y:auto;}
+.screen{display:none;animation:fadeUp .28s ease;}.screen.active{display:block;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+.greeting{margin-bottom:28px;}.greeting h1{font-family:'DM Serif Display',serif;font-size:30px;line-height:1.2;}
+.greeting h1 span{color:var(--pink-500);font-style:italic;}.greeting p{font-size:15px;color:var(--text-muted);margin-top:6px;}
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:28px;}
+.stat-card{background:#fff;border-radius:var(--r-lg);padding:20px;border:1px solid var(--border);box-shadow:var(--shadow-soft);position:relative;overflow:hidden;}
+.stat-card::before{content:'';position:absolute;top:-18px;right:-18px;width:72px;height:72px;border-radius:50%;background:var(--pink-100);opacity:.55;}
+.stat-label{font-size:12px;font-weight:500;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
+.stat-value{font-family:'DM Serif Display',serif;font-size:32px;color:var(--pink-600);line-height:1;}
+.stat-sub{font-size:12px;color:var(--text-muted);margin-top:6px;}
+.sec-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.sec-title{font-family:'DM Serif Display',serif;font-size:20px;color:var(--text-dark);}
+.sec-link{font-size:13px;color:var(--pink-500);cursor:pointer;}.sec-link:hover{text-decoration:underline;}
+.nanny-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;}
+.nanny-card{background:#fff;border-radius:var(--r-lg);border:1px solid var(--border);padding:20px;box-shadow:var(--shadow-soft);transition:transform .2s,box-shadow .2s;}
+.nanny-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-card);}
+.nanny-head{display:flex;align-items:center;gap:12px;margin-bottom:14px;}
+.nanny-avatar{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;flex-shrink:0;border:2px solid var(--pink-200);}
+.av-a{background:#fce4ec;color:#c2185b;}.av-b{background:#e8eaf6;color:#3949ab;}.av-c{background:#e8f5e9;color:#2e7d32;}.av-d{background:#fff8e1;color:#f57f17;}.av-e{background:#fce4ec;color:#880e4f;}
+.nanny-info .name{font-size:15px;font-weight:600;}.nanny-info .exp{font-size:12px;color:var(--text-muted);margin-top:2px;}
+.nanny-rows{display:flex;flex-direction:column;gap:7px;margin-bottom:14px;}
+.nanny-row{display:flex;align-items:center;justify-content:space-between;}
+.row-label{font-size:13px;color:var(--text-muted);}
+.badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:500;}
+.badge-green{background:#e8f5e9;color:#2e7d32;}.badge-amber{background:#fff8e1;color:#e65100;}
+.badge-pink{background:var(--pink-100);color:var(--pink-600);}.badge-blue{background:#e3f2fd;color:#1565c0;}
+.badge-gray{background:#f5f5f5;color:#757575;}.badge-red{background:#ffebee;color:#c62828;}
+.stars{color:#f4a620;font-size:14px;letter-spacing:1px;}
+.btn{display:inline-block;padding:9px 18px;border-radius:var(--r-sm);border:1px solid var(--border-strong);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:all .18s;background:transparent;color:var(--text-mid);}
+.btn:hover{background:var(--pink-100);color:var(--pink-600);}.btn:disabled{opacity:.4;cursor:not-allowed;}
+.btn-primary{background:var(--pink-500);color:#fff;border-color:var(--pink-500);}.btn-primary:hover{background:var(--pink-600);}
+.btn-block{width:100%;text-align:center;}.btn-sm{padding:5px 12px;font-size:12px;}
+.btn-success{background:#e8f5e9;color:#2e7d32;border-color:#a5d6a7;}.btn-success:hover{background:#c8e6c9;}
+.btn-danger{background:#ffebee;color:#c62828;border-color:#ef9a9a;}.btn-danger:hover{background:#ffcdd2;}
+.search-bar{display:flex;gap:10px;margin-bottom:22px;background:#fff;border-radius:var(--r-lg);padding:10px 14px;border:1px solid var(--border);box-shadow:var(--shadow-soft);}
+.search-input{flex:1;border:none;outline:none;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text-dark);background:transparent;}
+.search-input::placeholder{color:var(--text-muted);}
+.search-select{border:none;outline:none;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text-mid);background:var(--pink-50);border-radius:var(--r-sm);padding:6px 10px;cursor:pointer;}
+.order-list{display:flex;flex-direction:column;gap:12px;}
+.order-card{background:#fff;border-radius:var(--r-lg);border:1px solid var(--border);padding:16px 20px;display:flex;align-items:center;justify-content:space-between;box-shadow:var(--shadow-soft);gap:12px;flex-wrap:wrap;}
+.order-card.urgent{border-left:3px solid var(--pink-400);}
+.order-title{font-size:15px;font-weight:600;}.order-meta{font-size:13px;color:var(--text-muted);margin-top:3px;}
+.order-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;flex-shrink:0;}
+.profile-card{background:#fff;border-radius:var(--r-xl);border:1px solid var(--border);padding:28px;max-width:560px;box-shadow:var(--shadow-card);}
+.profile-head{display:flex;align-items:center;gap:16px;margin-bottom:20px;}
+.profile-avatar-lg{width:64px;height:64px;border-radius:50%;font-size:20px;font-weight:700;border:3px solid var(--pink-200);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.profile-name{font-family:'DM Serif Display',serif;font-size:20px;}.profile-role-label{font-size:13px;color:var(--text-muted);margin-top:3px;}
+.divider{height:1px;background:var(--border);margin:18px 0;}
+.field-row{display:flex;gap:12px;margin-bottom:10px;}
+.field-label{font-size:13px;color:var(--text-muted);width:120px;flex-shrink:0;}.field-val{font-size:14px;color:var(--text-dark);}
+.admin-tbl{width:100%;border-collapse:separate;border-spacing:0;background:#fff;border-radius:var(--r-lg);border:1px solid var(--border);overflow:hidden;box-shadow:var(--shadow-soft);font-size:14px;}
+.admin-tbl th{padding:12px 16px;text-align:left;background:var(--pink-50);color:var(--text-muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);}
+.admin-tbl td{padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-dark);vertical-align:middle;}
+.admin-tbl tr:last-child td{border-bottom:none;}.admin-tbl tr:hover td{background:var(--pink-50);}
+#page-login{min-height:100vh;display:flex;flex-direction:column;}
+.login-topbar{padding:16px 32px;display:flex;align-items:center;border-bottom:1px solid var(--border);background:rgba(253,248,249,.9);}
+.login-wrap{flex:1;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 70% 20%,var(--pink-100) 0%,transparent 60%),radial-gradient(ellipse at 20% 80%,#ffe0eb 0%,transparent 55%);}
+.login-card{background:#fff;border-radius:var(--r-xl);border:1px solid var(--border);padding:36px 40px;width:380px;box-shadow:var(--shadow-card);}
+.login-brand{font-family:'DM Serif Display',serif;font-size:28px;color:var(--text-dark);margin-bottom:4px;}.login-brand span{color:var(--pink-500);font-style:italic;}
+.login-sub{font-size:14px;color:var(--text-muted);margin-bottom:28px;}
+.login-tabs{display:flex;background:var(--pink-50);border-radius:var(--r-sm);padding:3px;margin-bottom:24px;}
+.login-tab{flex:1;padding:8px;text-align:center;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--text-muted);transition:all .2s;}
+.login-tab.active{background:#fff;color:var(--pink-600);box-shadow:0 1px 6px rgba(180,80,120,0.12);}
+.form-group{margin-bottom:16px;}
+.form-label{display:block;font-size:12px;font-weight:600;color:var(--text-mid);margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px;}
+.form-input{width:100%;padding:11px 14px;border-radius:var(--r-sm);border:1px solid var(--border-strong);font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text-dark);background:var(--pink-50);outline:none;transition:border-color .2s;}
+.form-input:focus{border-color:var(--pink-400);background:#fff;}
+textarea.form-input{resize:vertical;min-height:72px;}
+.login-footer{text-align:center;margin-top:20px;font-size:13px;color:var(--text-muted);}.login-footer a{color:var(--pink-500);cursor:pointer;}
+.error-msg{background:#ffebee;color:#c62828;border-radius:var(--r-sm);padding:10px 14px;font-size:13px;margin-bottom:14px;display:none;}
+.reg-extra{display:none;}
+.toast{position:fixed;bottom:28px;right:28px;background:var(--text-dark);color:#fff;font-size:14px;padding:12px 20px;border-radius:var(--r-md);box-shadow:0 8px 32px rgba(0,0,0,0.18);opacity:0;transform:translateY(10px);transition:all .3s;pointer-events:none;z-index:9999;max-width:320px;}
+.toast.show{opacity:1;transform:none;}.toast.success{background:#2e7d32;}.toast.error{background:#c62828;}
+.loader{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:300;animation:mfadeIn .18s ease;}
+@keyframes mfadeIn{from{opacity:0;}to{opacity:1;}}
+.modal-card{background:#fff;border-radius:var(--r-xl);padding:32px;width:480px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-card);animation:mslideUp .22s ease;}
+@keyframes mslideUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:none;}}
+.modal-title{font-family:'DM Serif Display',serif;font-size:22px;margin-bottom:20px;color:var(--text-dark);}
+.modal-actions{display:flex;gap:10px;margin-top:20px;}.modal-actions .btn{flex:1;text-align:center;}
+.info-banner{background:#fff8e1;border:1px solid #ffe082;border-radius:var(--r-md);padding:14px 18px;font-size:14px;color:#7c5000;margin-bottom:18px;}
+.toggle-avail-btn{display:inline-flex;align-items:center;gap:8px;padding:9px 20px;border-radius:40px;font-size:14px;font-weight:600;cursor:pointer;border:1.5px solid;transition:all .2s;margin-bottom:16px;}
+.toggle-avail-btn.is-free{background:#edfbf1;color:#166534;border-color:#a7e9c0;}
+.toggle-avail-btn.is-busy{background:#fff0f0;color:#991b1b;border-color:#fca5a5;}
+.edit-profile-form{background:var(--pink-50);border:1px solid var(--border);border-radius:var(--r-lg);padding:22px;margin-top:18px;}
+.child-card{background:#fff;border:1px solid var(--border);border-radius:var(--r-lg);padding:14px 18px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;}
+.child-name{font-size:15px;font-weight:600;}.child-meta{font-size:13px;color:var(--text-muted);margin-top:2px;}
+.doc-upload-area{border:2px dashed var(--border-strong);border-radius:var(--r-lg);padding:28px;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:16px;}
+.doc-upload-area:hover{border-color:var(--pink-400);background:var(--pink-50);}.doc-upload-area input{display:none;}
+.doc-card{background:#fff;border:1px solid var(--border);border-radius:var(--r-lg);padding:14px 18px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.doc-icon{font-size:28px;flex-shrink:0;}
+.doc-info .doc-title{font-size:14px;font-weight:600;color:var(--text-dark);}
+.doc-info .doc-meta{font-size:12px;color:var(--text-muted);margin-top:2px;}
+.doc-type-badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;background:var(--pink-100);color:var(--pink-700);margin-top:4px;}
+.chat-wrap{display:flex;flex-direction:column;height:calc(100vh - 200px);min-height:400px;background:#fff;border-radius:var(--r-xl);border:1px solid var(--border);box-shadow:var(--shadow-card);overflow:hidden;}
+.chat-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;background:var(--pink-50);}
+.chat-header-avatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0;background:var(--pink-200);color:var(--pink-700);}
+.chat-header-info .chat-name{font-weight:600;font-size:15px;}
+.chat-header-info .chat-sub{font-size:12px;color:var(--text-muted);}
+.chat-messages{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:10px;background:#fafafa;}
+.msg-row{display:flex;flex-direction:column;max-width:72%;}
+.msg-row.mine{align-self:flex-end;align-items:flex-end;}
+.msg-row.theirs{align-self:flex-start;align-items:flex-start;}
+.msg-bubble{padding:10px 14px;border-radius:18px;font-size:14px;line-height:1.5;word-break:break-word;}
+.msg-row.mine .msg-bubble{background:var(--pink-500);color:#fff;border-bottom-right-radius:4px;}
+.msg-row.theirs .msg-bubble{background:#fff;color:var(--text-dark);border:1px solid var(--border);border-bottom-left-radius:4px;}
+.msg-meta{font-size:11px;color:var(--text-muted);margin-top:3px;}
+.chat-input-area{padding:16px 20px;border-top:1px solid var(--border);display:flex;gap:10px;align-items:flex-end;background:#fff;}
+.chat-input{flex:1;border:1px solid var(--border-strong);border-radius:var(--r-md);padding:10px 14px;font-family:'DM Sans',sans-serif;font-size:14px;outline:none;resize:none;min-height:44px;max-height:120px;background:var(--pink-50);}
+.chat-input:focus{border-color:var(--pink-400);background:#fff;}
+.chat-send-btn{width:44px;height:44px;border-radius:50%;background:var(--pink-500);border:none;color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .18s;flex-shrink:0;}
+.chat-send-btn:hover{background:var(--pink-600);}
+.chat-empty{text-align:center;color:var(--text-muted);padding:40px 20px;font-size:14px;}
+.chat-list-item{background:#fff;border:1px solid var(--border);border-radius:var(--r-lg);padding:14px 18px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:all .18s;margin-bottom:10px;}
+.chat-list-item:hover{background:var(--pink-50);border-color:var(--pink-300);}
+/* WALLET */
+.wallet-card{background:linear-gradient(135deg,#e84a78 0%,#c73461 100%);border-radius:var(--r-xl);padding:28px;color:#fff;margin-bottom:24px;position:relative;overflow:hidden;}
+.wallet-card::before{content:'';position:absolute;top:-30px;right:-30px;width:140px;height:140px;border-radius:50%;background:rgba(255,255,255,0.08);}
+.wallet-card::after{content:'';position:absolute;bottom:-20px;left:40px;width:90px;height:90px;border-radius:50%;background:rgba(255,255,255,0.06);}
+.wallet-label{font-size:13px;font-weight:500;opacity:.8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
+.wallet-amount{font-family:'DM Serif Display',serif;font-size:46px;line-height:1;font-weight:400;margin-bottom:6px;}
+.wallet-sub{font-size:13px;opacity:.75;}
+.wallet-actions{display:flex;gap:12px;margin-top:22px;position:relative;z-index:1;}
+.wallet-btn{padding:10px 20px;border-radius:40px;border:none;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;}
+.wallet-btn-white{background:#fff;color:var(--pink-600);}
+.wallet-btn-white:hover{background:var(--pink-50);}
+.wallet-btn-outline{background:rgba(255,255,255,0.15);color:#fff;border:1.5px solid rgba(255,255,255,0.4);}
+.wallet-btn-outline:hover{background:rgba(255,255,255,0.25);}
+.tx-item{background:#fff;border:1px solid var(--border);border-radius:var(--r-lg);padding:14px 18px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.tx-icon{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.tx-icon.pay{background:#fff0f0;}.tx-icon.topup{background:#edfbf1;}.tx-icon.earn{background:#e3f2fd;}
+.tx-info .tx-title{font-size:14px;font-weight:600;color:var(--text-dark);}
+.tx-info .tx-meta{font-size:12px;color:var(--text-muted);margin-top:2px;}
+.tx-amount{font-size:16px;font-weight:700;}.tx-amount.minus{color:#c62828;}.tx-amount.plus{color:#2e7d32;}
+.commission-info{background:#f3f0ff;border:1px solid #c4b5fd;border-radius:var(--r-md);padding:12px 16px;font-size:13px;color:#5b21b6;margin-top:12px;}
+.admin-wallet-card{background:#fff;border-radius:var(--r-xl);border:2px solid var(--pink-200);padding:24px;margin-bottom:24px;display:flex;align-items:center;gap:24px;}
+.admin-wallet-icon{font-size:48px;}
+.admin-wallet-info .aw-label{font-size:13px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;}
+.admin-wallet-info .aw-amount{font-family:'DM Serif Display',serif;font-size:38px;color:var(--pink-600);}
+.topup-quick-amounts{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;}
+.topup-quick-amounts button{padding:8px 16px;border-radius:40px;border:1.5px solid var(--border-strong);background:var(--pink-50);font-size:14px;font-weight:500;cursor:pointer;transition:all .2s;color:var(--text-mid);}
+.topup-quick-amounts button:hover{background:var(--pink-100);border-color:var(--pink-400);color:var(--pink-600);}
+@media(max-width:768px){.sidebar{display:none;}.stat-grid{grid-template-columns:1fr 1fr;}.nanny-grid{grid-template-columns:1fr;}.main{padding:20px;}.topbar{padding:12px 16px;}.wallet-amount{font-size:34px;}}
+@media(max-width:480px){.stat-grid{grid-template-columns:1fr;}}
+
+/* ── NANNY EARNINGS PANEL ── */
+.earnings-panel {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  padding: 22px 24px;
+  margin-bottom: 20px;
+  box-shadow: var(--shadow-card);
+}
+.period-tabs { display: flex; gap: 6px; }
+.period-tab {
+  padding: 6px 16px; border-radius: 40px;
+  border: 1.5px solid var(--border-strong);
+  background: var(--pink-50); font-size: 13px; font-weight: 600;
+  color: var(--text-mid); cursor: pointer; transition: all .18s;
+}
+.period-tab:hover { border-color: var(--pink-400); color: var(--pink-600); }
+.period-tab.active { background: var(--pink-500); color: #fff; border-color: var(--pink-500); }
+.earnings-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 4px; }
+@media(max-width:600px){ .earnings-stats { grid-template-columns: 1fr 1fr; } .period-tabs { flex-wrap: wrap; } }
+.earn-stat-card {
+  background: linear-gradient(135deg, #fdf2f8, #fce7f3);
+  border: 1px solid var(--pink-200);
+  border-radius: var(--r-lg); padding: 16px 18px;
+}
+.earn-stat-card.blue { background: linear-gradient(135deg, #eff6ff, #dbeafe); border-color: #bfdbfe; }
+.earn-stat-card.green { background: linear-gradient(135deg, #f0fdf4, #dcfce7); border-color: #a7e9c0; }
+.earn-stat-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: #8890a0; margin-bottom: 6px; }
+.earn-stat-val { font-family: 'DM Serif Display', serif; font-size: 26px; color: var(--text-dark); line-height: 1.1; }
+.earn-stat-sub { font-size: 12px; color: #8890a0; margin-top: 4px; }
+.fin-modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(15,10,30,0.55);
+  backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 400;
+  animation: mfadeIn .18s ease;
+}
+.fin-modal {
+  width: 420px; max-width: 95vw;
+  background: #fff;
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 0 24px 64px rgba(0,0,0,.18);
+  animation: mslideUp .22s ease;
+}
+.fin-modal-header {
+  padding: 28px 28px 0;
+}
+.fin-modal-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 12px; border-radius: 40px;
+  font-size: 12px; font-weight: 700; letter-spacing: .5px;
+  text-transform: uppercase; margin-bottom: 12px;
+}
+.fin-modal-badge.topup  { background: #e8f9ef; color: #1a7a45; }
+.fin-modal-badge.withdraw { background: #fff0f6; color: #b0245c; }
+.fin-modal-title {
+  font-family: 'DM Serif Display', serif;
+  font-size: 22px; color: #1a1a2e; margin-bottom: 4px;
+}
+.fin-modal-balance {
+  font-size: 13px; color: #8890a0; margin-bottom: 20px;
+}
+.fin-modal-balance strong { color: #1a1a2e; }
+/* virtual card strip */
+.fin-card-strip {
+  margin: 0 28px 20px;
+  background: linear-gradient(135deg, #1e2d5a 0%, #3a5cbf 60%, #6c4fcf 100%);
+  border-radius: 16px; padding: 20px 22px 18px;
+  position: relative; overflow: hidden;
+}
+.fin-card-strip::before {
+  content: ''; position: absolute;
+  width: 180px; height: 180px; border-radius: 50%;
+  background: rgba(255,255,255,.07);
+  top: -60px; right: -50px;
+}
+.fin-card-strip::after {
+  content: ''; position: absolute;
+  width: 120px; height: 120px; border-radius: 50%;
+  background: rgba(255,255,255,.05);
+  bottom: -40px; left: 20px;
+}
+.fin-card-logo {
+  font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
+  color: rgba(255,255,255,.6); text-transform: uppercase;
+  margin-bottom: 16px;
+}
+.fin-card-number-input {
+  background: rgba(255,255,255,.15);
+  border: 1px solid rgba(255,255,255,.25);
+  border-radius: 10px; width: 100%; box-sizing: border-box;
+  padding: 11px 14px; color: #fff;
+  font-family: 'DM Mono', 'Courier New', monospace;
+  font-size: 16px; letter-spacing: 2px;
+  outline: none; transition: border-color .2s;
+  margin-bottom: 12px;
+}
+.fin-card-number-input::placeholder { color: rgba(255,255,255,.4); }
+.fin-card-number-input:focus { border-color: rgba(255,255,255,.6); }
+.fin-card-row { display: flex; gap: 10px; }
+.fin-card-input {
+  background: rgba(255,255,255,.15);
+  border: 1px solid rgba(255,255,255,.25);
+  border-radius: 10px; flex: 1;
+  padding: 10px 14px; color: #fff;
+  font-family: 'DM Sans', sans-serif; font-size: 14px;
+  outline: none; transition: border-color .2s;
+}
+.fin-card-input::placeholder { color: rgba(255,255,255,.4); }
+.fin-card-input:focus { border-color: rgba(255,255,255,.6); }
+/* body */
+.fin-modal-body { padding: 0 28px 24px; }
+.fin-amount-label {
+  font-size: 12px; font-weight: 700; letter-spacing: .5px;
+  text-transform: uppercase; color: #8890a0; margin-bottom: 8px;
+}
+.fin-quick-amounts {
+  display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px;
+}
+.fin-quick-btn {
+  padding: 7px 14px; border-radius: 40px;
+  border: 1.5px solid #e2e5ee;
+  background: #f8f9fc; font-size: 13px; font-weight: 600;
+  color: #3a3f5c; cursor: pointer; transition: all .18s;
+}
+.fin-quick-btn:hover { background: var(--pink-50); border-color: var(--pink-400); color: var(--pink-600); }
+.fin-amount-input {
+  width: 100%; box-sizing: border-box;
+  border: 1.5px solid #e2e5ee; border-radius: 12px;
+  padding: 12px 16px; font-family: 'DM Sans', sans-serif;
+  font-size: 18px; font-weight: 700; color: #1a1a2e;
+  outline: none; transition: border-color .2s;
+  margin-bottom: 16px;
+}
+.fin-amount-input:focus { border-color: var(--pink-400); }
+.fin-amount-input::placeholder { font-size: 15px; font-weight: 400; color: #aab; }
+.fin-modal-actions { display: flex; gap: 10px; }
+.fin-btn {
+  flex: 1; padding: 13px 20px; border-radius: 40px;
+  font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 700;
+  cursor: pointer; border: none; transition: all .2s;
+}
+.fin-btn-cancel {
+  background: #f0f1f5; color: #5a6070;
+}
+.fin-btn-cancel:hover { background: #e5e7ed; }
+.fin-btn-confirm-topup {
+  background: linear-gradient(135deg, #e84a78, #c73461);
+  color: #fff;
+}
+.fin-btn-confirm-topup:hover { opacity: .9; transform: translateY(-1px); }
+.fin-btn-confirm-withdraw {
+  background: linear-gradient(135deg, #7c3aed, #5b21b6);
+  color: #fff;
+}
+.fin-btn-confirm-withdraw:hover { opacity: .9; transform: translateY(-1px); }
+.fin-btn:disabled { opacity: .6; cursor: not-allowed; transform: none !important; }
+
+/* ── NANNY SCHEDULE ── */
+.schedule-wrap { margin-top: 8px; }
+.schedule-week {
+  display: grid; grid-template-columns: repeat(7, 1fr);
+  gap: 4px; margin-bottom: 16px;
+}
+.schedule-day-label {
+  text-align: center; font-size: 11px; font-weight: 700;
+  color: #8890a0; letter-spacing: .5px; text-transform: uppercase;
+  padding-bottom: 4px;
+}
+.schedule-day-col { display: flex; flex-direction: column; gap: 4px; min-height: 80px; }
+.schedule-slot {
+  border-radius: 8px; padding: 5px 6px;
+  font-size: 11px; font-weight: 600; line-height: 1.3;
+  cursor: default; user-select: none;
+}
+.schedule-slot.busy {
+  background: linear-gradient(135deg, #fce4ec, #f8bbd9);
+  color: #b0245c; border: 1px solid #f48fb1;
+}
+.schedule-slot.free-gap {
+  background: #e8f9ef; color: #1a7a45;
+  border: 1px dashed #a7e9c0; font-size: 10px;
+}
+.schedule-empty {
+  color: #aab; font-size: 13px; text-align: center;
+  padding: 24px 0; grid-column: 1/-1;
+}
+.schedule-legend {
+  display: flex; gap: 16px; font-size: 12px; color: #5a6070;
+  margin-bottom: 12px; flex-wrap: wrap;
+}
+.schedule-legend span { display: flex; align-items: center; gap: 5px; }
+.sleg-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<div id="page-login">
+  <div class="login-topbar"><div class="logo">Sabi<span>Track</span></div></div>
+  <div class="login-wrap">
+    <div class="login-card">
+      <div class="login-brand">Sabi<span>Track</span></div>
+      <div class="login-sub">Безопасный поиск нянь в Казахстане</div>
+      <div class="login-tabs">
+        <button class="login-tab active" onclick="setLoginRole('parent')">Родитель</button>
+        <button class="login-tab" onclick="setLoginRole('nanny')">Няня</button>
+        <button class="login-tab" onclick="setLoginRole('admin')">Администратор</button>
+      </div>
+      <div class="error-msg" id="login-error"></div>
+      <div style="display:flex;gap:8px;margin-bottom:20px;">
+        <button class="btn btn-sm" id="tab-login" onclick="setMode('login')" style="flex:1;background:var(--pink-500);color:#fff;border-color:var(--pink-500);">Войти</button>
+        <button class="btn btn-sm" id="tab-register" onclick="setMode('register')" style="flex:1;">Регистрация</button>
+      </div>
+      <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="inp-email" type="email" placeholder="example@mail.kz"></div>
+      <div class="form-group">
+        <label class="form-label">Пароль</label>
+        <div style="position:relative;"><input class="form-input" id="inp-password" type="password" placeholder="Введите пароль" style="padding-right:40px;">
+        <span id="togglePassword" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:18px;user-select:none;">👁️</span></div>
+      </div>
+      <div class="reg-extra" id="reg-extra">
+        <div class="form-group"><label class="form-label">Ваше имя</label><input class="form-input" id="inp-name" type="text" placeholder="Аяша Касымова"></div>
+        <div class="form-group"><label class="form-label">Телефон</label><input class="form-input" id="inp-phone" type="tel" placeholder="+7 701 000 0000"></div>
+        <div class="form-group reg-nanny-only" style="display:none;"><label class="form-label">Опыт работы (лет)</label><input class="form-input" id="inp-experience" type="number" placeholder="3" min="0" max="50"></div>
+      </div>
+      <button class="btn btn-primary btn-block" id="submit-btn" onclick="handleSubmit()" style="padding:12px;">Войти</button>
+      <div class="login-footer" id="switch-mode-link">Нет аккаунта? <a onclick="setMode('register')">Зарегистрироваться</a></div>
+    </div>
+  </div>
+</div>
+
+<div id="page-app" style="display:none;">
+  <div class="topbar">
+    <div class="logo">Sabi<span>Track</span></div>
+    <div id="role-badge-container"></div>
+    <div class="user-chip">
+      <div class="balance-chip" id="topbar-balance" onclick="showScreen('wallet')" title="Кошелёк">💰 —</div>
+      <div class="user-avatar" id="top-avatar">АК</div>
+      <span id="top-name">...</span>
+      <button class="btn btn-sm" onclick="doLogout()" style="margin-left:6px;">Выйти</button>
+    </div>
+  </div>
+  <div class="layout">
+    <nav class="sidebar" id="sidebar"></nav>
+    <main class="main" id="main-content"></main>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div id="modal-root"></div>
+
+<div id="fin-modal" class="fin-modal-overlay" style="display:none;" onclick="finModalOverlayClick(event)">
+  <div class="fin-modal" id="fin-modal-box">
+    <div class="fin-modal-header">
+      <div class="fin-modal-badge" id="fin-modal-badge">💳 Пополнение</div>
+      <div class="fin-modal-title" id="fin-modal-title">Пополнить баланс</div>
+      <div class="fin-modal-balance">Текущий баланс: <strong id="fin-modal-balance-val">—</strong></div>
+    </div>
+    <div class="fin-card-strip">
+      <div class="fin-card-logo">SabiTrack Card</div>
+      <input class="fin-card-number-input" id="fin-card-number" type="text" placeholder="0000 0000 0000 0000" maxlength="19" oninput="fmtCardNum(this)">
+      <div class="fin-card-row">
+        <input class="fin-card-input" id="fin-card-expiry" type="text" placeholder="ММ/ГГ" maxlength="5" oninput="fmtExpiry(this)">
+        <input class="fin-card-input" id="fin-card-cvv" type="password" placeholder="CVV" maxlength="3">
+      </div>
+    </div>
+    <div class="fin-modal-body">
+      <div class="fin-amount-label">Сумма (₸)</div>
+      <div class="fin-quick-amounts" id="fin-quick-amounts">
+        <button class="fin-quick-btn" onclick="setFinAmount(5000)">5 000</button>
+        <button class="fin-quick-btn" onclick="setFinAmount(10000)">10 000</button>
+        <button class="fin-quick-btn" onclick="setFinAmount(20000)">20 000</button>
+        <button class="fin-quick-btn" onclick="setFinAmount(50000)">50 000</button>
+      </div>
+      <input class="fin-amount-input" id="fin-amount" type="number" placeholder="Введите сумму" min="100">
+      <div class="fin-modal-actions">
+        <button class="fin-btn fin-btn-cancel" onclick="closeFinModal()">Отмена</button>
+        <button class="fin-btn" id="fin-confirm-btn" onclick="handleFinAction()">Пополнить</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="wallet-balance-display" class="...">0 ₸</div>
+<div id="wallet-actions"></div> ```
+
+<script>
+var API='';
+var state={token:localStorage.getItem('sabi_token')||null,role:null,user:null,children:[],balance:0,loginRole:'parent',mode:'login',currentScreen:null,chatOrderId:null,chatPollTimer:null,chatLastId:0};
+
+async function api(method,path,body){var h={'Content-Type':'application/json'};if(state.token)h['Authorization']='Bearer '+state.token;var res=await fetch(API+path,{method:method,headers:h,body:body?JSON.stringify(body):undefined});var data=await res.json();if(!res.ok)throw new Error(data.error||'Ошибка сервера');return data;}
+
+var _tt;
+function showToast(msg,type){var t=document.getElementById('toast');t.textContent=msg;t.className='toast show'+(type?' '+type:'');clearTimeout(_tt);_tt=setTimeout(function(){t.classList.remove('show');},3500);}
+function showModal(html){document.getElementById('modal-root').innerHTML='<div class="modal-overlay" onclick="closeModalOverlay(event)">'+html+'</div>';}
+function closeModal(){document.getElementById('modal-root').innerHTML='';}
+function closeModalOverlay(e){if(e.target.classList.contains('modal-overlay'))closeModal();}
+
+function setLoginRole(role){state.loginRole=role;document.querySelectorAll('.login-tab').forEach(function(t,i){t.classList.toggle('active',['parent','nanny','admin'][i]===role);});document.querySelectorAll('.reg-nanny-only').forEach(function(el){el.style.display=(role==='nanny'&&state.mode==='register')?'block':'none';});document.getElementById('tab-register').style.display=role==='admin'?'none':'';document.getElementById('switch-mode-link').style.display=role==='admin'?'none':'';if(role==='admin'&&state.mode==='register')setMode('login');}
+function setMode(mode){state.mode=mode;var isReg=mode==='register';document.getElementById('reg-extra').style.display=isReg?'block':'none';document.querySelectorAll('.reg-nanny-only').forEach(function(el){el.style.display=(isReg&&state.loginRole==='nanny')?'block':'none';});document.getElementById('submit-btn').textContent=isReg?'Зарегистрироваться':'Войти';document.getElementById('switch-mode-link').innerHTML=isReg?'Уже есть аккаунт? <a onclick="setMode(\'login\')">Войти</a>':'Нет аккаунта? <a onclick="setMode(\'register\')">Зарегистрироваться</a>';var tl=document.getElementById('tab-login'),tr=document.getElementById('tab-register');tl.style.cssText=isReg?'flex:1;':'flex:1;background:var(--pink-500);color:#fff;border-color:var(--pink-500);';tr.style.cssText=isReg?'flex:1;background:var(--pink-500);color:#fff;border-color:var(--pink-500);':'flex:1;';document.getElementById('login-error').style.display='none';}
+function showError(msg){var el=document.getElementById('login-error');el.textContent=msg;el.style.display=msg?'block':'none';}
+
+async function handleSubmit(){var email=document.getElementById('inp-email').value.trim(),password=document.getElementById('inp-password').value,btn=document.getElementById('submit-btn');if(!email||!password){showError('Заполните email и пароль');return;}btn.innerHTML='<span class="loader"></span>Загрузка...';btn.disabled=true;showError('');try{var data;if(state.mode==='register'){var name=document.getElementById('inp-name').value.trim(),phone=document.getElementById('inp-phone').value.trim();if(!name){showError('Введите ваше имя');return;}var body={name:name,phone:phone,email:email,password:password};if(state.loginRole==='nanny')body.experience=parseInt(document.getElementById('inp-experience').value)||0;data=await api('POST','/api/auth/register/'+state.loginRole,body);}else{data=await api('POST','/api/auth/login',{email:email,password:password,role:state.loginRole});}state.token=data.token;state.role=data.role;state.user=data.user;localStorage.setItem('sabi_token',data.token);await enterApp();showToast(state.mode==='register'?'🌸 Регистрация успешна!':'Добро пожаловать!','success');}catch(err){showError(err.message);}finally{btn.innerHTML=state.mode==='register'?'Зарегистрироваться':'Войти';btn.disabled=false;}}
+document.addEventListener('keydown',function(e){if(e.key==='Enter'&&document.getElementById('page-login').style.display!=='none')handleSubmit();});
+
+var ROLE_LABELS={parent:'Родитель',nanny:'Няня',admin:'Администратор'};
+function renderRoleBadge(role){document.getElementById('role-badge-container').innerHTML='<div class="role-badge role-badge-'+role+'"><span class="dot"></span>Вы вошли как:&nbsp;<strong>'+(ROLE_LABELS[role]||role)+'</strong></div>';}
+
+async function refreshBalance(){try{var r=await api('GET','/api/wallet/balance');state.balance=r.balance;updateBalanceChip();}catch(e){}}
+function updateBalanceChip(){var chip=document.getElementById('topbar-balance');if(!chip)return;var b=state.balance;chip.textContent='💰 '+fmt(b)+' ₸';chip.className='balance-chip'+(b<1000?' low':'');chip.title='Кошелёк: '+fmt(b)+' ₸ (нажмите для пополнения)';}
+function fmt(n){return Number(n||0).toLocaleString('ru',{minimumFractionDigits:0,maximumFractionDigits:2});}
+
+async function enterApp(){document.getElementById('page-login').style.display='none';document.getElementById('page-app').style.display='block';var parts=(state.user&&state.user.name?state.user.name:'U').split(' ');document.getElementById('top-avatar').textContent=parts.map(function(w){return w[0];}).join('').slice(0,2).toUpperCase();document.getElementById('top-name').textContent=parts[0]+(parts[1]?' '+parts[1][0]+'.':'');renderRoleBadge(state.role);if(state.role==='admin'){document.getElementById('topbar-balance').style.display='none';}else{await refreshBalance();}if(state.role==='parent'){try{state.children=await api('GET','/api/children/my');}catch(e){state.children=[];}if(state.children.length===0){buildSidebar(state.role);showAddChildModal(true);return;}}buildSidebar(state.role);}
+async function doLogout(){stopChatPoll();try{await api('POST','/api/auth/logout');}catch(e){}localStorage.removeItem('sabi_token');state.token=null;state.role=null;state.user=null;state.children=[];state.balance=0;document.getElementById('page-app').style.display='none';document.getElementById('page-login').style.display='flex';showToast('Вы вышли из системы');}
+
+var NAV={
+  parent:[{l:'Главная',i:'🏠',s:'parent-home'},{l:'Найти няню',i:'🔍',s:'search'},{l:'Мои заказы',i:'📋',s:'orders'},{l:'Кошелёк',i:'💰',s:'wallet'},{l:'Сообщения',i:'💬',s:'chats'},{l:'Профиль',i:'👤',s:'parent-profile'}],
+  nanny: [{l:'Главная',i:'🏠',s:'nanny-home'},{l:'Мои заказы',i:'📋',s:'nanny-orders'},{l:'Расписание',i:'📅',s:'nanny-schedule'},{l:'Кошелёк',i:'💰',s:'wallet'},{l:'Сообщения',i:'💬',s:'chats'},{l:'Документы',i:'📄',s:'nanny-docs'},{l:'Профиль',i:'👤',s:'nanny-profile'}],
+  admin: [{l:'Дашборд',i:'📊',s:'admin-home'},{l:'Пользователи',i:'👥',s:'admin-users'},{l:'Верификация',i:'✅',s:'admin-verify'},{l:'Все заказы',i:'📋',s:'admin-orders'},{l:'Финансы',i:'💹',s:'wallet'}],
+};
+function buildSidebar(role){var items=NAV[role]||[];document.getElementById('sidebar').innerHTML='<div class="nav-section">Меню</div>'+items.map(function(it){return '<button class="nav-item" data-screen="'+it.s+'" onclick="showScreen(\''+it.s+'\')">'+'<span class="nav-icon">'+it.i+'</span>'+it.l+'</button>';}).join('');if(items[0])showScreen(items[0].s);}
+function showScreen(id){stopChatPoll();state.currentScreen=id;document.querySelectorAll('.nav-item').forEach(function(el){el.classList.toggle('active',el.dataset.screen===id);});document.getElementById('main-content').innerHTML='<div class="screen active">'+renderScreen(id)+'</div>';afterRender(id);}
+
+function starsHTML(r){if(!r)return '<span style="color:var(--text-muted);font-size:12px;">Нет оценок</span>';var f=Math.round(r);return '<span class="stars">'+'★'.repeat(f)+'☆'.repeat(5-f)+'</span><span style="font-size:12px;color:var(--text-muted);margin-left:4px;">'+parseFloat(r).toFixed(1)+'</span>';}
+var BM={'Верифицирована':'badge-green','На проверке':'badge-amber','Отказано':'badge-red','В процессе':'badge-pink','Подтверждён':'badge-blue','Завершён':'badge-gray','Ожидает':'badge-amber','Срочный':'badge-red','Плановый':'badge-blue','Активен':'badge-green','Свободна':'badge-green','Занята':'badge-amber','paid':'badge-green','pending':'badge-amber'};
+function badge(t){return '<span class="badge '+(BM[t]||'badge-gray')+'">'+t+'</span>';}
+var AV=['av-a','av-b','av-c','av-d','av-e'];
+function avClass(id){return AV[((id||1)-1)%AV.length];}
+function initials(n){return(n||'?').split(' ').map(function(w){return w[0];}).join('').slice(0,2).toUpperCase();}
+function fmtDate(d){if(!d)return'—';return new Date(d).toLocaleString('ru',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});}
+function fmtTime(d){if(!d)return'';return new Date(d).toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'});}
+function esc(s){return String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'")}
+var DOCTYPE_LABELS={diploma:'🎓 Диплом',certificate:'🏅 Сертификат',id:'🪪 Удостоверение',other:'📎 Другое'};
+function docIcon(mime){if(!mime)return'📎';if(mime.includes('pdf'))return'📄';if(mime.includes('image'))return'🖼️';return'📎';}
+
+function renderScreen(id){
+  var fn=(state.user&&state.user.name?state.user.name:'').split(' ')[0]||'Гость',uid=state.user?state.user.id:1,uav=avClass(uid),uini=initials(state.user?state.user.name:''),u=state.user||{};
+  if(id==='parent-home')return '<div class="greeting"><h1>Добро пожаловать, <span>'+fn+'!</span></h1><p>Найдите надёжную няню для вашего ребёнка</p></div><div class="stat-grid"><div class="stat-card"><div class="stat-label">Активные заказы</div><div class="stat-value" id="stat-active">—</div><div class="stat-sub">в процессе</div></div><div class="stat-card"><div class="stat-label">Доступно нянь</div><div class="stat-value" id="stat-nannies">—</div><div class="stat-sub">верифицированы</div></div><div class="stat-card"><div class="stat-label">Ваш баланс</div><div class="stat-value" id="stat-balance" style="font-size:24px;">'+fmt(state.balance)+' ₸</div><div class="stat-sub"><a class="sec-link" onclick="showScreen(\'wallet\')">Пополнить →</a></div></div></div><div class="sec-head"><div class="sec-title">Рекомендуемые няни</div><a class="sec-link" onclick="showScreen(\'search\')">Найти няню →</a></div><div class="nanny-grid" id="home-nannies"><div style="color:var(--text-muted);padding:20px;">Загрузка...</div></div>';
+  if(id==='search')return '<div class="greeting"><h1>Найти <span>няню</span></h1><p>Все няни проходят верификацию</p></div><div class="search-bar"><input class="search-input" id="sq" type="text" placeholder="Поиск по имени..." oninput="filterNannies()"><select class="search-select" id="sf-avail" onchange="filterNannies()"><option value="">Все</option><option value="true">Только свободные</option></select><select class="search-select" id="sf-exp" onchange="filterNannies()"><option value="">Любой опыт</option><option value="5">5+ лет</option><option value="10">10+ лет</option></select></div><div class="nanny-grid" id="search-results"><div style="color:var(--text-muted);padding:20px;">Загрузка...</div></div>';
+  if(id==='orders')return '<div class="greeting"><h1>Мои <span>заказы</span></h1></div><div id="orders-list"><div style="color:var(--text-muted);">Загрузка...</div></div><div style="margin-top:20px;"><button class="btn btn-primary" onclick="showScreen(\'search\')">+ Найти няню</button></div>';
+  if(id==='parent-profile')return '<div class="greeting"><h1>Мой <span>профиль</span></h1></div><div class="profile-card"><div class="profile-head"><div class="nanny-avatar '+uav+' profile-avatar-lg">'+uini+'</div><div><div class="profile-name">'+(u.name||'—')+'</div><div class="profile-role-label">Родитель</div></div></div><div class="divider"></div><div class="field-row"><span class="field-label">Телефон</span><span class="field-val">'+(u.phone||'—')+'</span></div><div class="field-row"><span class="field-label">Email</span><span class="field-val">'+(u.email||'—')+'</span></div><div class="divider"></div><div class="sec-head" style="margin-bottom:12px;"><div class="sec-title" style="font-size:17px;">Мои дети</div><button class="btn btn-sm btn-primary" onclick="showAddChildModal(false)">+ Добавить</button></div><div id="children-list"><div style="color:var(--text-muted);">Загрузка...</div></div></div>';
+  if(id==='nanny-home')return '<div class="greeting"><h1>Добро пожаловать, <span>'+fn+'!</span></h1><p>Управляйте заказами и профилем</p></div><div class="stat-grid"><div class="stat-card"><div class="stat-label">Активных заказов</div><div class="stat-value" id="stat-n-active">—</div></div><div class="stat-card"><div class="stat-label">Рейтинг</div><div class="stat-value" id="stat-n-rating">—</div></div><div class="stat-card"><div class="stat-label">Ваш заработок</div><div class="stat-value" id="stat-n-balance" style="font-size:24px;">'+fmt(state.balance)+' ₸</div><div class="stat-sub">на счёте</div></div></div><div class="sec-head"><div class="sec-title">Входящие заказы</div></div><div id="nanny-incoming"><div style="color:var(--text-muted);">Загрузка...</div></div>';
+  if(id==='nanny-orders')return '<div class="greeting"><h1>Мои <span>заказы</span></h1></div><div id="nanny-orders-list"><div style="color:var(--text-muted);">Загрузка...</div></div>';
+  if(id==='nanny-schedule')return '<div class="greeting"><h1>Моё <span>расписание</span></h1><p>Ближайшие 7 дней · интервал между заказами — 30 мин</p></div><div id="nanny-schedule-content"><div style="color:var(--text-muted);">Загрузка...</div></div>';
+  if(id==='nanny-docs')return '<div class="greeting"><h1>Мои <span>документы</span></h1><p>Загрузите дипломы и сертификаты для верификации</p></div><div style="margin-bottom:20px;"><button class="btn btn-primary" onclick="showUploadDocModal()">📎 Загрузить документ</button></div><div id="docs-list"><div style="color:var(--text-muted);">Загрузка...</div></div>';
+  if(id==='nanny-profile'){var isAvail=u.available;return '<div class="greeting"><h1>Мой <span>профиль</span></h1></div><div class="profile-card"><div class="profile-head"><div class="nanny-avatar '+uav+' profile-avatar-lg">'+uini+'</div><div><div class="profile-name">'+(u.name||'—')+'</div><div class="profile-role-label">Няня · '+badge(u.status||'На проверке')+'</div></div></div><button id="avail-btn" class="toggle-avail-btn '+(isAvail?'is-free':'is-busy')+'" onclick="toggleAvailability()"><span id="avail-icon">'+(isAvail?'🟢':'🔴')+'</span><span id="avail-label">'+(isAvail?'Я свободна':'Я занята')+'</span></button><div class="divider"></div><div class="field-row"><span class="field-label">Опыт</span><span class="field-val" id="pf-exp">'+(u.experience||0)+' лет</span></div><div class="field-row"><span class="field-label">Рейтинг</span><span class="field-val">'+starsHTML(u.rating)+'</span></div><div class="field-row"><span class="field-label">Телефон</span><span class="field-val" id="pf-phone">'+(u.phone||'—')+'</span></div><div class="field-row"><span class="field-label">Email</span><span class="field-val">'+(u.email||'—')+'</span></div><div class="edit-profile-form"><div style="font-weight:600;margin-bottom:14px;">Редактировать анкету</div><div class="form-group"><label class="form-label">Опыт (лет)</label><input class="form-input" id="edit-exp" type="number" value="'+(u.experience||0)+'" min="0" max="50"></div><div class="form-group"><label class="form-label">Телефон</label><input class="form-input" id="edit-phone" type="tel" value="'+(u.phone||'')+'"></div><button class="btn btn-primary btn-block" onclick="saveNannyProfile()">Сохранить изменения</button></div><div style="margin-top:18px;"><button class="btn btn-block" onclick="showScreen(\'nanny-docs\')">📄 Управление документами</button></div></div>';}
+  if(id==='chats')return '<div class="greeting"><h1>Сообщения</h1><p>Чаты по активным заказам</p></div><div id="chats-list"><div style="color:var(--text-muted);">Загрузка...</div></div>';
+
+  // ── КОШЕЛЁК ──
+  if(id==='wallet'){
+    if(state.role==='admin')return renderAdminWallet();
+    var isParent=state.role==='parent';
+    var hint=isParent?'Пополните баланс и оплачивайте услуги нянь напрямую через SabiTrack':'Здесь отображается ваш заработок за принятые заказы';
+    return '<div class="greeting"><h1>Мой <span>кошелёк</span></h1><p>'+hint+'</p></div>'+
+      '<div class="wallet-card">'+
+        '<div class="wallet-label">Текущий баланс</div>'+
+        '<div class="wallet-amount" id="wallet-balance-display">'+fmt(state.balance)+' ₸</div>'+
+        '<div class="wallet-sub">'+(isParent?'Доступно для оплаты заказов':'Заработано (90% от стоимости заказов)')+'</div>'+
+        (isParent?'<div class="wallet-actions"><button class="wallet-btn wallet-btn-white" onclick="showTopupModal()">+ Пополнить</button><button class="wallet-btn wallet-btn-outline" onclick="showScreen(\'orders\')">Мои заказы</button></div>':'<div class="wallet-actions"><button class="wallet-btn wallet-btn-white" onclick="showWithdrawInfo()">Вывод средств</button></div>')+
+      '</div>'+
+      (isParent?'<div class="commission-info">💡 <strong>Комиссия платформы — 10%</strong> от суммы заказа автоматически удерживается при оплате. Няня получает 90% стоимости.</div>':
+       '<div class="commission-info">💡 Вы получаете <strong>90%</strong> от суммы каждого принятого заказа. 10% — комиссия платформы SabiTrack.</div>')+
+      (isParent?'':'<div class="earnings-panel" id="earnings-panel"><div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px;"><div style="font-family:var(--font-serif);font-size:17px;font-weight:600;color:var(--text-dark);">📊 Статистика заработка</div><div class="period-tabs" id="period-tabs"><button class="period-tab active" onclick="setEarningsPeriod(1,this)">1 месяц</button><button class="period-tab" onclick="setEarningsPeriod(2,this)">2 месяца</button><button class="period-tab" onclick="setEarningsPeriod(0,this)">Всё время</button></div></div><div class="earnings-stats" id="earnings-stats"><div style="color:var(--text-muted);font-size:13px;">Загрузка...</div></div></div>')+
+      '<div style="margin-top:28px;"><div class="sec-head"><div class="sec-title">История операций</div></div><div id="tx-history"><div style="color:var(--text-muted);">Загрузка...</div></div></div>';
+  }
+
+  if(id==='admin-home')return '<div class="greeting"><h1>Панель <span>администратора</span></h1></div><div class="stat-grid"><div class="stat-card"><div class="stat-label">Всего нянь</div><div class="stat-value" id="st-nannies">—</div><div class="stat-sub" id="st-nannies-v">верифицировано</div></div><div class="stat-card"><div class="stat-label">Родителей</div><div class="stat-value" id="st-parents">—</div></div><div class="stat-card"><div class="stat-label">Заказов всего</div><div class="stat-value" id="st-orders">—</div></div></div><div class="sec-head"><div class="sec-title">Ожидают верификации</div><a class="sec-link" onclick="showScreen(\'admin-verify\')">Все →</a></div><div id="pending-nannies"><div style="color:var(--text-muted);">Загрузка...</div></div>';
+  if(id==='admin-users')return '<div class="greeting"><h1>Все <span>пользователи</span></h1></div><div id="users-table"><div style="color:var(--text-muted);">Загрузка...</div></div>';
+  if(id==='admin-verify')return '<div class="greeting"><h1>Верификация <span>нянь</span></h1></div><div id="verify-table"><div style="color:var(--text-muted);">Загрузка...</div></div>';
+  if(id==='admin-orders')return '<div class="greeting"><h1>Все <span>заказы</span></h1></div><div id="all-orders-table"><div style="color:var(--text-muted);">Загрузка...</div></div>';
+  return '<div class="greeting"><h1>Страница не найдена</h1></div>';
+}
+
+function renderAdminWallet(){
+  return '<div class="greeting"><h1>Финансы <span>платформы</span></h1><p>Касса и история всех транзакций SabiTrack</p></div>'+
+    '<div class="admin-wallet-card">'+
+      '<div class="admin-wallet-icon">🏦</div>'+
+      '<div class="admin-wallet-info">'+
+        '<div class="aw-label">Касса платформы (10% комиссии)</div>'+
+        '<div class="aw-amount" id="admin-wallet-amount">Загрузка...</div>'+
+        '<div style="font-size:13px;color:var(--text-muted);margin-top:4px;" id="admin-wallet-stats"></div>'+
+      '</div>'+
+    '</div>'+
+    '<div class="stat-grid" id="admin-fin-stats" style="margin-bottom:24px;"></div>'+
+    '<div class="sec-head"><div class="sec-title">История транзакций</div></div>'+
+    '<div id="tx-history"><div style="color:var(--text-muted);">Загрузка...</div></div>';
+}
+
+var allNannies=[];
+async function afterRender(id){
+  try{
+    if(id==='parent-home'||id==='search'){var nannies=await api('GET','/api/nannies');allNannies=nannies;if(id==='parent-home'){document.getElementById('stat-nannies').textContent=nannies.length;var o=await api('GET','/api/orders/my');document.getElementById('stat-active').textContent=o.filter(function(x){return x.status==='В процессе'||x.status==='Подтверждён';}).length;var el=document.getElementById('home-nannies');el.innerHTML=nannies.slice(0,4).map(nannyCardHTML).join('')||'<div style="color:var(--text-muted)">Нянь пока нет</div>';}else{document.getElementById('search-results').innerHTML=nannies.map(nannyCardHTML).join('')||'<div style="color:var(--text-muted)">Нянь не найдено</div>';}}
+    if(id==='orders'){var o=await api('GET','/api/orders/my');renderOrderList('orders-list',o,'parent');}
+    if(id==='parent-profile'){try{state.children=await api('GET','/api/children/my');}catch(e){state.children=[];}renderChildrenList();}
+    if(id==='nanny-home'||id==='nanny-orders'){var o=await api('GET','/api/orders/my');if(id==='nanny-home'){var active=o.filter(function(x){return x.status==='Ожидает'||x.status==='В процессе';});document.getElementById('stat-n-active').textContent=active.length;document.getElementById('stat-n-rating').textContent=state.user&&state.user.rating?parseFloat(state.user.rating).toFixed(1):'—';document.getElementById('stat-n-done')||'';var el=document.getElementById('nanny-incoming');el.innerHTML=active.length?active.map(nannyOrderCard).join(''):'<div style="color:var(--text-muted);padding:16px;">Новых заказов нет</div>';}else{renderOrderList('nanny-orders-list',o,'nanny');}}
+    if(id==='nanny-schedule'){loadNannySchedule();}
+    if(id==='nanny-docs'){renderMyDocs();}
+    if(id==='chats'){renderChatsList();}
+    if(id==='wallet'){await loadWalletScreen();}
+    if(id==='admin-home'||id==='admin-users'||id==='admin-verify'){var data=await api('GET','/api/nannies/admin/users');if(id==='admin-home'){document.getElementById('st-nannies').textContent=data.nannies.length;document.getElementById('st-nannies-v').textContent=data.nannies.filter(function(n){return n.status==='Верифицирована';}).length+' верифицировано';document.getElementById('st-parents').textContent=data.parents.length;var ao=await api('GET','/api/orders/all');document.getElementById('st-orders').textContent=ao.length;var pend=data.nannies.filter(function(n){return n.status==='На проверке';});document.getElementById('pending-nannies').innerHTML=pend.length?pend.map(pendingNannyCard).join(''):'<div style="color:var(--text-muted);padding:16px;">Ожидающих нет</div>';}if(id==='admin-users')renderUsersTable(data);if(id==='admin-verify')renderVerifyTable(data.nannies);}
+    if(id==='admin-orders'){var ao=await api('GET','/api/orders/all');renderAllOrdersTable(ao);}
+  }catch(err){console.error('[SabiTrack]',err);showToast('Ошибка: '+err.message,'error');}
+}
+
+// ── WALLET SCREEN ──
+async function loadWalletScreen() {
+    try {
+        await refreshBalance();
+        const bd = document.getElementById('wallet-balance-display');
+        if (bd) bd.textContent = fmt(state.balance) + ' ₸';
+
+        const actionsEl = document.getElementById('wallet-actions'); 
+        if (actionsEl) {
+            if (state.role === 'nanny') {
+                // Если зашла няня — показываем кнопку вывода
+                actionsEl.innerHTML = `
+                    <button onclick="showWithdrawModal()" class="btn btn-primary" style="width:100%; margin-top:15px;">
+                        Вывести на карту
+                    </button>`;
+            } else if (state.role === 'parent') {
+                // Если зашел родитель — показываем кнопку пополнения
+                actionsEl.innerHTML = `
+                    <button onclick="showTopupModal()" class="btn btn-primary" style="width:100%; margin-top:15px;">
+                        Пополнить баланс
+                    </button>`;
+            } else {
+                actionsEl.innerHTML = ''; // Для админа можно оставить пустым
+            }
+        }
+
+        // 1. Секция админа
+        if (state.role === 'admin') {
+            try {
+                const s = await api('GET', '/api/wallet/admin/stats');
+                const el = document.getElementById('admin-wallet-amount');
+                if (el) el.textContent = fmt(s.platform_balance) + ' ₸';
+
+                const st = document.getElementById('admin-wallet-stats');
+                if (st) st.textContent = `Всего собрано комиссий: ${fmt(s.total_fees_earned)} ₸ · Платежей: ${s.payments_count}`;
+
+                const sg = document.getElementById('admin-fin-stats');
+                if (sg) {
+                    // Здесь используем шаблонные строки для читаемости
+                    sg.innerHTML = `
+                        <div class="stat-card">
+                            <div class="stat-label">Касса</div>
+                            <div class="stat-value" style="font-size:24px;">${fmt(s.platform_balance)} ₸</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Всего оборот</div>
+                            <div class="stat-value" style="font-size:24px;">${fmt(s.total_payments)} ₸</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Комиссий</div>
+                            <div class="stat-value" style="font-size:24px;">${fmt(s.total_fees_earned)} ₸</div>
+                        </div>`;
+                }
+            } catch (e) {
+                console.error("Ошибка загрузки админ-статистики:", e);
+            }
+        }
+
+        // 2. История транзакций
+        const el = document.getElementById('tx-history');
+        if (!el) return;
+
+        const h = await api('GET', '/api/wallet/history');
+        let all = [];
+
+        // Общие пополнения для всех, у кого они есть в ответе
+        if (h.topups) {
+            h.topups.forEach(t => {
+                all.push({
+                    date: t.created_at,
+                    icon: 'topup',
+                    title: 'Пополнение баланса',
+                    meta: 'Метод: ' + (t.method || 'не указан'),
+                    amount: '+' + fmt(t.amount) + ' ₸',
+                    cls: 'plus'
+                });
+            });
+        }
+
+        // Обработка транзакций по ролям
+        if (h.transactions) {
+            h.transactions.forEach(t => {
+                if (state.role === 'parent') {
+                    all.push({
+                        date: t.created_at,
+                        icon: 'pay',
+                        title: `Оплата заказа #${t.order_id || ''}`,
+                        meta: (t.nanny_name ? `Няня: ${t.nanny_name} · ` : '') + `${fmt(t.platform_fee)} ₸ комиссия`,
+                        amount: `-${fmt(t.total_amount)} ₸`,
+                        cls: 'minus'
+                    });
+                } else if (state.role === 'nanny') {
+                    all.push({
+                        date: t.created_at,
+                        icon: 'earn',
+                        title: `Оплата за заказ #${t.order_id || ''}`,
+                        meta: (t.parent_name ? `От: ${t.parent_name} · ` : '') + `Получено: ${fmt(t.nanny_amount)} ₸`,
+                        amount: `+${fmt(t.nanny_amount)} ₸`,
+                        cls: 'plus'
+                    });
+                } else {
+                    // Для админа
+                    all.push({
+                        date: t.created_at,
+                        icon: 'pay',
+                        title: `Транзакция #${t.id}`,
+                        meta: `${t.parent_name || 'Система'} → ${t.nanny_name || 'Няня'}`,
+                        amount: `Итого: ${fmt(t.total_amount)} ₸`,
+                        cls: 'plus'
+                    });
+                }
+            });
+        }
+
+        // Если няня — рендерим статистику заработка
+        if (state.role === 'nanny') {
+            renderEarningsStats(h.transactions || []);
+        }
+
+        // Сортировка
+        all.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        if (all.length === 0) {
+            el.innerHTML = '<div style="color:var(--text-muted);padding:24px;text-align:center;">Операций пока нет</div>';
+            return;
+        }
+
+        const ICONS = { pay: '💸', topup: '💳', earn: '💵' };
+
+        // Рендер (рекомендуется экранировать t.title и t.meta перед вставкой)
+        el.innerHTML = all.map(t => `
+            <div class="tx-item">
+                <div class="tx-icon ${t.icon}">${ICONS[t.icon]}</div>
+                <div class="tx-info" style="flex:1;min-width:0;">
+                    <div class="tx-title">${t.title}</div>
+                    <div class="tx-meta">${t.meta}</div>
+                    <div class="tx-meta">${fmtDate(t.date)}</div>
+                </div>
+                <div class="tx-amount ${t.cls}">${t.amount}</div>
+            </div>
+        `).join('');
+
+    } catch (err) {
+        console.error("Ошибка loadWalletScreen:", err);
+        const el = document.getElementById('tx-history');
+        if (el) el.innerHTML = '<div style="color:var(--text-muted);padding:24px;text-align:center;">Ошибка загрузки данных</div>';
+    }
+}
+
+
+
+// ── FINANCE MODAL (пополнение / вывод) ──
+var _finAction = 'topup';
+function openFinModal(action) {
+  _finAction = action;
+  var isTopup = action === 'topup';
+  document.getElementById('fin-modal-badge').textContent = isTopup ? '💳 Пополнение' : '💸 Вывод средств';
+  document.getElementById('fin-modal-badge').className = 'fin-modal-badge ' + (isTopup ? 'topup' : 'withdraw');
+  document.getElementById('fin-modal-title').textContent = isTopup ? 'Пополнить баланс' : 'Вывести средства';
+  document.getElementById('fin-modal-balance-val').textContent = fmt(state.balance) + ' ₸';
+  var confirmBtn = document.getElementById('fin-confirm-btn');
+  confirmBtn.textContent = isTopup ? 'Пополнить' : 'Вывести';
+  confirmBtn.className = 'fin-btn ' + (isTopup ? 'fin-btn-confirm-topup' : 'fin-btn-confirm-withdraw');
+  document.getElementById('fin-quick-amounts').innerHTML = isTopup
+    ? '<button class="fin-quick-btn" onclick="setFinAmount(5000)">5 000</button><button class="fin-quick-btn" onclick="setFinAmount(10000)">10 000</button><button class="fin-quick-btn" onclick="setFinAmount(20000)">20 000</button><button class="fin-quick-btn" onclick="setFinAmount(50000)">50 000</button>'
+    : '<button class="fin-quick-btn" onclick="setFinAmount(5000)">5 000</button><button class="fin-quick-btn" onclick="setFinAmount(10000)">10 000</button><button class="fin-quick-btn" onclick="setFinAmount(state.balance)">Весь баланс</button>';
+  document.getElementById('fin-amount').value = '';
+  document.getElementById('fin-card-number').value = '';
+  document.getElementById('fin-card-expiry').value = '';
+  document.getElementById('fin-card-cvv').value = '';
+  document.getElementById('fin-modal').style.display = 'flex';
+}
+function showTopupModal() { openFinModal('topup'); }
+function showWithdrawModal() { openFinModal('withdraw'); }
+function showWithdrawInfo() { openFinModal('withdraw'); }
+function closeFinModal() { document.getElementById('fin-modal').style.display = 'none'; }
+function closeTopupModal() { closeFinModal(); }
+function finModalOverlayClick(e) { if (e.target.id === 'fin-modal') closeFinModal(); }
+function setFinAmount(n) { var el=document.getElementById('fin-amount'); if(el) el.value=Math.floor(n); }
+function fmtCardNum(inp) { var v=inp.value.replace(/\D/g,'').slice(0,16); inp.value=v.replace(/(.{4})/g,'$1 ').trim(); }
+function fmtExpiry(inp) { var v=inp.value.replace(/\D/g,'').slice(0,4); if(v.length>=3) v=v.slice(0,2)+'/'+v.slice(2); inp.value=v; }
+async function handleFinAction() {
+  var amount = parseFloat(document.getElementById('fin-amount').value);
+  var btn = document.getElementById('fin-confirm-btn');
+  if (!amount || amount < 100) { showToast('Минимальная сумма — 100 ₸', 'error'); return; }
+  if (_finAction === 'withdraw' && amount > state.balance) { showToast('Недостаточно средств для вывода', 'error'); return; }
+  btn.disabled = true;
+  var origText = btn.textContent;
+  btn.textContent = 'Обработка...';
+  try {
+    if (_finAction === 'topup') {
+      var r = await api('POST', '/api/wallet/topup', {amount: amount, method: 'card'});
+      state.balance = r.balance; updateBalanceChip(); closeFinModal();
+      showToast('✅ Баланс пополнен на '+fmt(amount)+' ₸! Новый баланс: '+fmt(r.balance)+' ₸', 'success');
+      if (state.currentScreen === 'wallet') loadWalletScreen();
+      if (state.currentScreen === 'parent-home') { var bd=document.getElementById('stat-balance'); if(bd) bd.textContent=fmt(state.balance)+' ₸'; }
+    } else {
+      await api('POST', '/api/wallet/withdraw', {amount: amount, method: 'card'});
+      closeFinModal();
+      showToast('✅ Заявка на вывод '+fmt(amount)+' ₸ принята! Деньги придут в течение 24 часов.', 'success');
+      await refreshBalance();
+      if (state.currentScreen === 'wallet') loadWalletScreen();
+    }
+  } catch(err) { showToast('Ошибка: '+err.message, 'error'); }
+  finally { btn.disabled=false; btn.textContent=origText; }
+}
+async function doTopup() { await handleFinAction(); }
+
+// ── PAY ORDER (с баланса) ──
+async function payOrder(orderId,amount){
+  showModal('<div class="modal-card">'+
+    '<div class="modal-title">💸 Оплата заказа #'+orderId+'</div>'+
+    '<div style="margin-bottom:20px;">'+
+    '<div style="font-size:15px;margin-bottom:12px;">Стоимость услуг: <strong>'+fmt(amount)+' ₸</strong></div>'+
+    '<div class="tx-item" style="margin-bottom:8px;"><div class="tx-icon earn">💵</div><div class="tx-info"><div class="tx-title">Выплата няне (90%)</div></div><div class="tx-amount plus">'+fmt(amount*0.9)+' ₸</div></div>'+
+    '<div class="tx-item"><div class="tx-icon pay">🏦</div><div class="tx-info"><div class="tx-title">Комиссия SabiTrack (10%)</div></div><div class="tx-amount minus">'+fmt(amount*0.1)+' ₸</div></div>'+
+    '<div class="divider"></div>'+
+    '<div style="display:flex;justify-content:space-between;font-size:15px;font-weight:600;padding:0 4px;"><span>Итого спишется с баланса:</span><span style="color:var(--pink-600);">'+fmt(amount)+' ₸</span></div>'+
+    '<div style="font-size:13px;color:var(--text-muted);margin-top:8px;">Ваш баланс: '+fmt(state.balance)+' ₸</div>'+
+    (state.balance<amount?'<div class="info-banner" style="margin-top:12px;">⚠️ Недостаточно средств. <a onclick="closeModal();showTopupModal();" style="color:var(--pink-600);cursor:pointer;text-decoration:underline;">Пополнить баланс →</a></div>':'')+
+    '</div>'+
+    '<div class="modal-actions">'+
+      '<button class="btn" onclick="closeModal()">Отмена</button>'+
+      (state.balance>=amount?'<button class="btn btn-primary" onclick="confirmPayOrder('+orderId+')">Оплатить с баланса</button>':'<button class="btn btn-primary" onclick="closeModal();showTopupModal();">Пополнить баланс</button>')+
+    '</div></div>');
+}
+
+async function confirmPayOrder(orderId){
+  try{
+    var r=await api('POST','/api/wallet/pay-order',{order_id:orderId});
+    state.balance=r.new_balance;
+    updateBalanceChip();
+    closeModal();
+    showToast('✅ Оплата прошла! Списано: '+fmt(r.total)+' ₸ (комиссия '+fmt(r.fee)+' ₸)','success');
+    afterRender(state.currentScreen);
+    if(state.currentScreen==='wallet')loadWalletScreen();
+  }catch(err){closeModal();showToast(err.message,'error');}
+}
+
+
+
+// ── BUILDERS ──
+function nannyCardHTML(n){var canBook=n.available&&n.status==='Верифицирована',hasChild=state.children&&state.children.length>0,disabled=!canBook||!hasChild,btnLabel=canBook&&hasChild?'Заказать':!hasChild?'Добавьте ребёнка':'Недоступна';return '<div class="nanny-card"><div class="nanny-head"><div class="nanny-avatar '+avClass(n.id)+'">'+initials(n.name)+'</div><div class="nanny-info"><div class="name">'+n.name+'</div><div class="exp">'+n.experience+' лет опыта</div></div></div><div class="nanny-rows"><div class="nanny-row"><span class="row-label">Рейтинг</span>'+starsHTML(n.rating)+'</div><div class="nanny-row"><span class="row-label">Статус</span>'+badge(n.status)+'</div><div class="nanny-row"><span class="row-label">Доступность</span>'+badge(n.available?'Свободна':'Занята')+'</div></div><button class="btn '+(canBook&&hasChild?'btn-primary':'')+' btn-block"'+(disabled?' disabled':'')+' onclick="openBookingModal('+n.id+',\''+esc(n.name)+'\')">'+btnLabel+'</button>'+(state.role==='parent'?'<button class="btn btn-block" style="margin-top:8px;" onclick="showNannyDocs('+n.id+',\''+esc(n.name)+'\')">📄 Документы</button>':'')+' </div>';}
+
+function renderOrderList(cid,orders,role){var el=document.getElementById(cid);if(!el)return;if(!orders.length){el.innerHTML='<div style="color:var(--text-muted);padding:16px;">Заказов нет</div>';return;}el.innerHTML='<div class="order-list">'+orders.map(function(o){var title=role==='parent'?(o.nanny_name||'Няня'):(o.parent_name||'Родитель');var meta=[fmtDate(o.date_start),o.child_name].filter(Boolean).join(' · ');var urgent=o.order_type==='Срочный';var btns='';if(role==='nanny'&&o.status==='Ожидает')btns+='<button class="btn btn-sm btn-success" onclick="acceptOrder('+o.id+')">Принять</button><button class="btn btn-sm btn-danger" onclick="declineOrder('+o.id+')">Отклонить</button>';if(role==='nanny'&&o.status==='В процессе')btns+='<button class="btn btn-sm" onclick="completeOrder('+o.id+')">Завершить</button>';if(role==='parent'&&(o.status==='Подтверждён'||o.status==='В процессе')&&o.payment_status!=='paid')btns+='<button class="btn btn-sm btn-primary" onclick="payOrder('+o.id+','+(o.amount||5000)+')">💳 Оплатить</button>';if(role==='parent'&&o.payment_status==='paid')btns+=badge('Оплачено');if(role==='parent'&&o.status==='Завершён')btns+='<button class="btn btn-sm btn-success" onclick="openReviewModal('+o.id+','+o.nanny_id+',\''+esc(o.nanny_name||'Няня')+'\')">Отзыв</button>';if(o.status==='В процессе'||o.status==='Подтверждён')btns+='<button class="btn btn-sm" onclick="openChat('+o.id+',\''+esc(title)+'\')">💬 Чат</button>';return '<div class="order-card'+(urgent?' urgent':'')+'"><div><div class="order-title">'+title+'</div><div class="order-meta">'+meta+'</div></div><div class="order-actions">'+(urgent?badge('Срочный'):'')+badge(o.status)+btns+'</div></div>';}).join('')+'</div>';}
+
+function nannyOrderCard(o){return '<div class="order-card urgent"><div><div class="order-title">'+(o.parent_name||'Родитель')+'</div><div class="order-meta">'+(o.child_name?o.child_name+(o.age?', '+o.age+' лет':'')+' · ':'')+fmtDate(o.date_start)+'</div>'+(o.features?'<div class="order-meta" style="margin-top:4px;">💬 '+o.features+'</div>':'')+' </div><div class="order-actions">'+badge('Ожидает')+'<button class="btn btn-sm btn-success" onclick="acceptOrder('+o.id+')">Принять</button><button class="btn btn-sm btn-danger" onclick="declineOrder('+o.id+')">Отклонить</button></div></div>';}
+function pendingNannyCard(n){return '<div class="order-card"><div style="display:flex;align-items:center;gap:12px;"><div class="nanny-avatar '+avClass(n.id)+'" style="width:40px;height:40px;font-size:13px;">'+initials(n.name)+'</div><div><div class="order-title">'+n.name+'</div><div class="order-meta">Опыт: '+n.experience+' лет</div></div></div><div class="order-actions">'+badge(n.status)+'<button class="btn btn-sm" onclick="showAdminNannyDocs('+n.id+',\''+esc(n.name)+'\')">📄 Документы</button><button class="btn btn-sm btn-success" onclick="verifyNanny('+n.id+',\'Верифицирована\')">Одобрить</button><button class="btn btn-sm btn-danger" onclick="verifyNanny('+n.id+',\'Отказано\')">Отказ</button></div></div>';}
+function renderChildrenList(){var el=document.getElementById('children-list');if(!el)return;if(!state.children.length){el.innerHTML='<div class="info-banner">ℹ️ Нет добавленных детей. Добавьте данные ребёнка, чтобы заказывать нянь.</div>';return;}el.innerHTML=state.children.map(function(c){return '<div class="child-card"><div><div class="child-name">👶 '+c.name+'</div><div class="child-meta">'+c.age+' лет'+(c.features?' · '+c.features:'')+'</div></div><button class="btn btn-sm" onclick="showEditChildModal('+c.id+',\''+esc(c.name)+'\','+c.age+',\''+esc(c.features||'')+'\')">Изменить</button></div>';}).join('');}
+function renderUsersTable(data){var el=document.getElementById('users-table');if(!el)return;var rows=data.parents.map(function(p){return '<tr><td><b>'+p.name+'</b></td><td>'+badge('Родитель')+'</td><td>'+p.email+'</td><td>'+badge('Активен')+'</td><td><button class="btn btn-sm btn-danger" onclick="deleteUser('+p.id+',\'parent\',\''+esc(p.name)+'\')">Удалить</button></td></tr>';}).concat(data.nannies.map(function(n){var a='';if(n.status==='На проверке')a='<button class="btn btn-sm btn-success" onclick="verifyNanny('+n.id+',\'Верифицирована\')">Одобрить</button>';else if(n.status==='Верифицирована')a='<button class="btn btn-sm btn-danger" onclick="verifyNanny('+n.id+',\'Отказано\')">Заблокировать</button>';else a='<button class="btn btn-sm btn-success" onclick="verifyNanny('+n.id+',\'Верифицирована\')">Разблокировать</button>';a+='<button class="btn btn-sm" onclick="showAdminNannyDocs('+n.id+',\''+esc(n.name)+'\')">📄 Доки</button>';a+='<button class="btn btn-sm btn-danger" onclick="deleteUser('+n.id+',\'nanny\',\''+esc(n.name)+'\')">Удалить</button>';return '<tr><td><b>'+n.name+'</b></td><td>Няня</td><td>'+(n.email||'—')+'</td><td>'+badge(n.status)+'</td><td style="display:flex;gap:6px;flex-wrap:wrap;">'+a+'</td></tr>';}));el.innerHTML='<table class="admin-tbl"><thead><tr><th>Имя</th><th>Роль</th><th>Email</th><th>Статус</th><th>Действия</th></tr></thead><tbody>'+rows.join('')+'</tbody></table>';}
+function renderVerifyTable(nannies){var el=document.getElementById('verify-table');if(!el)return;if(!nannies.length){el.innerHTML='<div style="color:var(--text-muted);padding:16px;">Нянь нет</div>';return;}el.innerHTML='<table class="admin-tbl"><thead><tr><th>Няня</th><th>Опыт</th><th>Рейтинг</th><th>Статус</th><th>Действия</th></tr></thead><tbody>'+nannies.map(function(n){var a='';if(n.status==='На проверке')a='<button class="btn btn-sm btn-success" onclick="verifyNanny('+n.id+',\'Верифицирована\')">Одобрить</button><button class="btn btn-sm btn-danger" onclick="verifyNanny('+n.id+',\'Отказано\')">Отказ</button>';else if(n.status==='Верифицирована')a='<button class="btn btn-sm btn-danger" onclick="verifyNanny('+n.id+',\'Отказано\')">Заблокировать</button>';else a='<button class="btn btn-sm btn-success" onclick="verifyNanny('+n.id+',\'Верифицирована\')">Разблокировать</button>';return '<tr><td style="display:flex;align-items:center;gap:10px;"><div class="nanny-avatar '+avClass(n.id)+'" style="width:32px;height:32px;font-size:11px;">'+initials(n.name)+'</div><b>'+n.name+'</b></td><td>'+n.experience+' лет</td><td>'+starsHTML(n.rating)+'</td><td>'+badge(n.status)+'</td><td style="display:flex;gap:6px;flex-wrap:wrap;">'+a+'<button class="btn btn-sm" onclick="showAdminNannyDocs('+n.id+',\''+esc(n.name)+'\')">📄 Документы</button></td></tr>';}).join('')+'</tbody></table>';}
+function renderAllOrdersTable(orders){var el=document.getElementById('all-orders-table');if(!el)return;if(!orders.length){el.innerHTML='<div style="color:var(--text-muted);padding:16px;">Заказов нет</div>';return;}el.innerHTML='<table class="admin-tbl"><thead><tr><th>#</th><th>Родитель</th><th>Няня</th><th>Ребёнок</th><th>Сумма</th><th>Статус</th><th>Оплата</th><th>Дата</th></tr></thead><tbody>'+orders.map(function(o){return '<tr><td>#'+o.id+'</td><td>'+(o.parent_name||'—')+'</td><td>'+(o.nanny_name||'—')+'</td><td>'+(o.child_name||'—')+'</td><td>'+(o.amount?fmt(o.amount)+' ₸':'—')+'</td><td>'+badge(o.status)+'</td><td>'+(o.payment_status==='paid'?badge('Оплачено'):'<span style="color:var(--text-muted);font-size:12px;">Не оплачен</span>')+'</td><td>'+(o.date_start?new Date(o.date_start).toLocaleDateString('ru'):'—')+'</td></tr>';}).join('')+'</tbody></table>';}
+
+// ── DOCUMENTS ──
+async function renderMyDocs(){var el=document.getElementById('docs-list');if(!el)return;try{var docs=await api('GET','/api/documents/my');if(!docs.length){el.innerHTML='<div class="info-banner">📭 Документов пока нет. Загрузите дипломы и сертификаты для верификации.</div>';return;}el.innerHTML=docs.map(function(d){return '<div class="doc-card"><div style="display:flex;align-items:center;gap:14px;flex:1;min-width:0;"><div class="doc-icon">'+docIcon(d.mime_type)+'</div><div class="doc-info"><div class="doc-title">'+d.title+'</div><div class="doc-meta">'+d.file_name+'</div><div class="doc-type-badge">'+(DOCTYPE_LABELS[d.doc_type]||d.doc_type)+'</div><div class="doc-meta">'+fmtDate(d.created_at)+'</div></div></div><div style="display:flex;gap:8px;flex-shrink:0;"><button class="btn btn-sm" onclick="previewDoc('+d.id+')">👁 Просмотр</button><button class="btn btn-sm btn-danger" onclick="deleteDoc('+d.id+')">Удалить</button></div></div>';}).join('');}catch(err){el.innerHTML='<div style="color:var(--text-muted);">Ошибка загрузки</div>';}}
+async function showAdminNannyDocs(nannyId,nannyName){showModal('<div class="modal-card"><div class="modal-title">📄 Документы: '+nannyName+'</div><div id="modal-docs-list"><div style="color:var(--text-muted);">Загрузка...</div></div><div class="modal-actions"><button class="btn" onclick="closeModal()">Закрыть</button></div></div>');try{var docs=await api('GET','/api/documents/nanny/'+nannyId);var el=document.getElementById('modal-docs-list');if(!docs.length){el.innerHTML='<div class="info-banner">📭 Документов нет</div>';return;}el.innerHTML=docs.map(function(d){return '<div class="doc-card"><div style="display:flex;align-items:center;gap:14px;flex:1;min-width:0;"><div class="doc-icon">'+docIcon(d.mime_type)+'</div><div class="doc-info"><div class="doc-title">'+d.title+'</div><div class="doc-meta">'+d.file_name+'</div><div class="doc-type-badge">'+(DOCTYPE_LABELS[d.doc_type]||d.doc_type)+'</div></div></div><button class="btn btn-sm" onclick="previewDoc('+d.id+')">👁 Открыть</button></div>';}).join('');}catch(err){var el=document.getElementById('modal-docs-list');if(el)el.innerHTML='<div style="color:var(--text-muted);">'+err.message+'</div>';}}
+async function showNannyDocs(nannyId,nannyName){showModal('<div class="modal-card"><div class="modal-title">📄 Документы няни</div><div style="color:var(--text-mid);margin-bottom:16px;">👩 '+nannyName+'</div><div id="modal-docs-list"><div style="color:var(--text-muted);">Загрузка...</div></div><div class="modal-actions"><button class="btn" onclick="closeModal()">Закрыть</button></div></div>');try{var docs=await api('GET','/api/documents/nanny/'+nannyId);var el=document.getElementById('modal-docs-list');if(!docs.length){el.innerHTML='<div class="info-banner">📭 Документов пока не загружено</div>';return;}el.innerHTML=docs.map(function(d){return '<div class="doc-card"><div style="display:flex;align-items:center;gap:14px;flex:1;min-width:0;"><div class="doc-icon">'+docIcon(d.mime_type)+'</div><div class="doc-info"><div class="doc-title">'+d.title+'</div><div class="doc-type-badge">'+(DOCTYPE_LABELS[d.doc_type]||d.doc_type)+'</div></div></div><button class="btn btn-sm" onclick="previewDoc('+d.id+')">👁 Открыть</button></div>';}).join('');}catch(err){var el=document.getElementById('modal-docs-list');if(el)el.innerHTML='<div class="info-banner">🔒 '+err.message+'</div>';}}
+function showUploadDocModal(){showModal('<div class="modal-card"><div class="modal-title">📎 Загрузить документ</div><div class="form-group"><label class="form-label">Тип документа</label><select class="form-input" id="doc-type"><option value="diploma">🎓 Диплом об образовании</option><option value="certificate">🏅 Сертификат / Курс</option><option value="id">🪪 Удостоверение личности</option><option value="other">📎 Другое</option></select></div><div class="form-group"><label class="form-label">Название документа</label><input class="form-input" id="doc-title" placeholder="Диплом КазНУ, 2019"></div><div class="form-group"><label class="form-label">Файл (JPG, PNG, PDF — до 3 МБ)</label><div class="doc-upload-area" onclick="document.getElementById(\'doc-file\').click()"><input type="file" id="doc-file" accept=".jpg,.jpeg,.png,.webp,.pdf" onchange="handleFileSelect(event)"><div id="doc-file-label">📎 Нажмите для выбора файла</div></div></div><div class="modal-actions"><button class="btn" onclick="closeModal()">Отмена</button><button class="btn btn-primary" onclick="uploadDoc()">Загрузить</button></div></div>');}
+var _selectedFile=null;
+function handleFileSelect(e){var file=e.target.files[0];if(!file)return;_selectedFile=file;var label=document.getElementById('doc-file-label');if(label)label.innerHTML='✅ '+file.name+' ('+Math.round(file.size/1024)+' КБ)';}
+async function uploadDoc(){var docType=(document.getElementById('doc-type')||{}).value,title=((document.getElementById('doc-title')||{}).value||'').trim();if(!title){showToast('Введите название документа','error');return;}if(!_selectedFile){showToast('Выберите файл','error');return;}if(_selectedFile.size>3*1024*1024){showToast('Файл слишком большой (макс. 3 МБ)','error');return;}var reader=new FileReader();reader.onload=async function(e){try{await api('POST','/api/documents',{doc_type:docType,title:title,file_data:e.target.result,file_name:_selectedFile.name,mime_type:_selectedFile.type});_selectedFile=null;closeModal();showToast('Документ загружен!','success');renderMyDocs();}catch(err){showToast(err.message,'error');} };reader.readAsDataURL(_selectedFile);}
+async function previewDoc(docId){try{var d=await api('GET','/api/documents/'+docId+'/file');if(d.mime_type&&d.mime_type.includes('pdf')){var b64=d.file_data.includes(',')?d.file_data.split(',')[1]:d.file_data,byteChars=atob(b64),byteNums=new Array(byteChars.length);for(var i=0;i<byteChars.length;i++)byteNums[i]=byteChars.charCodeAt(i);var blob=new Blob([new Uint8Array(byteNums)],{type:'application/pdf'});window.open(URL.createObjectURL(blob),'_blank');}else{showModal('<div class="modal-card" style="width:90vw;max-width:700px;"><div class="modal-title">'+d.file_name+'</div><img src="'+d.file_data+'" style="width:100%;border-radius:var(--r-lg);max-height:60vh;object-fit:contain;" /><div class="modal-actions"><button class="btn" onclick="closeModal()">Закрыть</button><a class="btn btn-primary" href="'+d.file_data+'" download="'+d.file_name+'">⬇ Скачать</a></div></div>');}}catch(err){showToast(err.message,'error');}}
+async function deleteDoc(docId){if(!confirm('Удалить документ?'))return;try{await api('DELETE','/api/documents/'+docId);showToast('Документ удалён');renderMyDocs();}catch(err){showToast(err.message,'error');}}
+
+// ── MESSENGER ──
+async function renderChatsList(){var el=document.getElementById('chats-list');if(!el)return;try{var orders=await api('GET','/api/orders/my');var active=orders.filter(function(o){return o.status==='В процессе'||o.status==='Подтверждён';});if(!active.length){el.innerHTML='<div style="color:var(--text-muted);padding:24px;text-align:center;">💬 Нет активных заказов для переписки</div>';return;}el.innerHTML=active.map(function(o){var partner=state.role==='parent'?(o.nanny_name||'Няня'):(o.parent_name||'Родитель');return '<div class="chat-list-item" onclick="openChat('+o.id+',\''+esc(partner)+'\')"><div class="chat-header-avatar">'+initials(partner)+'</div><div><div style="font-weight:600;font-size:15px;">'+partner+'</div><div style="font-size:13px;color:var(--text-muted);">'+badge(o.status)+' · Заказ #'+o.id+'</div></div></div>';}).join('');}catch(err){el.innerHTML='<div style="color:var(--text-muted);">Ошибка загрузки</div>';}}
+function openChat(orderId,partnerName){stopChatPoll();state.chatOrderId=orderId;state.chatLastId=0;document.getElementById('main-content').innerHTML='<div class="screen active"><div class="chat-wrap"><div class="chat-header"><div class="chat-header-avatar">'+initials(partnerName)+'</div><div class="chat-header-info"><div class="chat-name">'+partnerName+'</div><div class="chat-sub">Заказ #'+orderId+'</div></div><button class="btn btn-sm" style="margin-left:auto;" onclick="showScreen(\'chats\')">← Назад</button></div><div class="chat-messages" id="chat-messages"><div class="chat-empty">Загрузка...</div></div><div class="chat-input-area"><textarea class="chat-input" id="chat-input" placeholder="Написать сообщение..." rows="1" onkeydown="chatKeydown(event)"></textarea><button class="chat-send-btn" onclick="sendMessage()">➤</button></div></div></div>';loadMessages(true);state.chatPollTimer=setInterval(function(){loadMessages(false);},3000);}
+async function loadMessages(initial){var el=document.getElementById('chat-messages');if(!el)return;try{var msgs=await api('GET','/api/messages/'+state.chatOrderId+'?after='+state.chatLastId);if(!msgs.length&&initial){el.innerHTML='<div class="chat-empty">Начните переписку! 👋</div>';return;}if(!msgs.length)return;if(initial)el.innerHTML='';msgs.forEach(function(m){var isMe=(state.role===m.sender_role&&state.user&&state.user.id===m.sender_id);var row=document.createElement('div');row.className='msg-row '+(isMe?'mine':'theirs');row.innerHTML='<div class="msg-bubble">'+escHtml(m.text)+'</div><div class="msg-meta">'+(isMe?'Вы':m.sender_name)+' · '+fmtTime(m.created_at)+'</div>';el.appendChild(row);state.chatLastId=Math.max(state.chatLastId,m.id);});el.scrollTop=el.scrollHeight;}catch(err){console.error('Chat poll',err);}}
+async function sendMessage(){var inp=document.getElementById('chat-input');if(!inp)return;var text=inp.value.trim();if(!text)return;inp.value='';try{await api('POST','/api/messages',{order_id:state.chatOrderId,text:text});loadMessages(false);}catch(err){showToast(err.message,'error');}}
+function chatKeydown(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();}}
+function stopChatPoll(){if(state.chatPollTimer){clearInterval(state.chatPollTimer);state.chatPollTimer=null;}state.chatOrderId=null;state.chatLastId=0;}
+function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');}
+
+// ── FILTER ──
+function filterNannies(){var q=(document.getElementById('sq')?document.getElementById('sq').value:'').toLowerCase(),avail=document.getElementById('sf-avail')?document.getElementById('sf-avail').value:'',exp=parseInt(document.getElementById('sf-exp')?document.getElementById('sf-exp').value:0)||0;var filtered=allNannies.filter(function(n){if(q&&!n.name.toLowerCase().includes(q))return false;if(avail==='true'&&!n.available)return false;if(exp&&n.experience<exp)return false;return true;});var el=document.getElementById('search-results');if(el)el.innerHTML=filtered.length?filtered.map(nannyCardHTML).join(''):'<div style="color:var(--text-muted);padding:24px;text-align:center;">Ничего не найдено</div>';}
+
+// ── CHILD MODALS ──
+function showAddChildModal(required){showModal('<div class="modal-card"><div class="modal-title">'+(required?'👶 Добавьте данные ребёнка':'👶 Новый ребёнок')+'</div>'+(required?'<div class="info-banner">ℹ️ Для заказа няни необходимо добавить данные ребёнка.</div>':'')+'<div class="form-group"><label class="form-label">Имя ребёнка</label><input class="form-input" id="mc-name" placeholder="Арман"></div><div class="form-group"><label class="form-label">Возраст (лет)</label><input class="form-input" id="mc-age" type="number" min="0" max="17" placeholder="3"></div><div class="form-group"><label class="form-label">Особенности / пожелания</label><textarea class="form-input" id="mc-features" placeholder="Аллергии..."></textarea></div><div class="modal-actions">'+(required?'':'<button class="btn" onclick="closeModal()">Отмена</button>')+'<button class="btn btn-primary" onclick="saveChild()">Сохранить</button></div></div>');}
+function showEditChildModal(id,name,age,features){showModal('<div class="modal-card"><div class="modal-title">Редактировать данные ребёнка</div><div class="form-group"><label class="form-label">Имя</label><input class="form-input" id="mc-name" value="'+name+'"></div><div class="form-group"><label class="form-label">Возраст</label><input class="form-input" id="mc-age" type="number" min="0" max="17" value="'+age+'"></div><div class="form-group"><label class="form-label">Особенности</label><textarea class="form-input" id="mc-features">'+features+'</textarea></div><div class="modal-actions"><button class="btn" onclick="closeModal()">Отмена</button><button class="btn btn-primary" onclick="updateChild('+id+')">Сохранить</button></div></div>');}
+function openBookingModal(nannyId,nannyName){if(!state.children||!state.children.length){showToast('Сначала добавьте данные ребёнка','error');return;}var opts=state.children.map(function(c){return '<option value="'+c.id+'">'+c.name+' ('+c.age+' лет)</option>';}).join(''),tmrw=new Date(Date.now()+86400000),tmrwStr=tmrw.toISOString().slice(0,16),tmrwEnd=new Date(tmrw.getTime()+2*3600000).toISOString().slice(0,16);showModal('<div class="modal-card"><div class="modal-title">Заказать няню</div><div style="color:var(--text-mid);margin-bottom:18px;font-size:15px;">👩 '+nannyName+'</div><div class="form-group"><label class="form-label">Ребёнок</label><select class="form-input" id="bk-child">'+opts+'</select></div><div class="form-group"><label class="form-label">Тип заказа</label><select class="form-input" id="bk-type"><option value="Плановый">Плановый</option><option value="Срочный">Срочный</option></select></div><div class="form-group"><label class="form-label">Дата и время начала</label><input class="form-input" id="bk-start" type="datetime-local" value="'+tmrwStr+'"></div><div class="form-group"><label class="form-label">Дата и время окончания</label><input class="form-input" id="bk-end" type="datetime-local" value="'+tmrwEnd+'"></div><div class="form-group"><label class="form-label">Стоимость (₸)</label><input class="form-input" id="bk-amount" type="number" value="5000" min="1000"></div><div class="commission-info">💡 При оплате: <strong>10%</strong> — комиссия SabiTrack, <strong>90%</strong> — выплата няне</div><div class="modal-actions"><button class="btn" onclick="closeModal()">Отмена</button><button class="btn btn-primary" onclick="confirmBooking('+nannyId+',\''+esc(nannyName)+'\')">Создать заказ</button></div></div>');}
+function openReviewModal(orderId,nannyId,nannyName){showModal('<div class="modal-card"><div class="modal-title">Оставить отзыв</div><div style="color:var(--text-mid);margin-bottom:16px;">👩 '+nannyName+'</div><div class="form-group"><label class="form-label">Оценка (1–5)</label><input class="form-input" id="rv-rating" type="number" min="1" max="5" value="5"></div><div class="form-group"><label class="form-label">Комментарий</label><textarea class="form-input" id="rv-text" placeholder="Ваш отзыв..."></textarea></div><div class="modal-actions"><button class="btn" onclick="closeModal()">Отмена</button><button class="btn btn-primary" onclick="submitReview('+orderId+','+nannyId+')">Отправить</button></div></div>');}
+
+// ── ACTIONS ──
+async function saveChild(){var name=((document.getElementById('mc-name')||{}).value||'').trim(),age=parseInt((document.getElementById('mc-age')||{}).value),features=((document.getElementById('mc-features')||{}).value||'').trim();if(!name){showToast('Введите имя ребёнка','error');return;}if(isNaN(age)){showToast('Введите возраст','error');return;}try{var c=await api('POST','/api/children',{name:name,age:age,features:features});state.children.push(c);closeModal();showToast('Данные ребёнка сохранены!','success');if(state.currentScreen==='parent-profile')renderChildrenList();if(state.children.length===1)buildSidebar(state.role);}catch(err){showToast(err.message,'error');}}
+async function updateChild(id){var name=((document.getElementById('mc-name')||{}).value||'').trim(),age=parseInt((document.getElementById('mc-age')||{}).value),features=((document.getElementById('mc-features')||{}).value||'').trim();if(!name){showToast('Введите имя','error');return;}try{var u=await api('PATCH','/api/children/'+id,{name:name,age:age,features:features});state.children=state.children.map(function(c){return c.id===id?u:c;});closeModal();showToast('Данные обновлены!','success');renderChildrenList();}catch(err){showToast(err.message,'error');}}
+async function confirmBooking(nid,nname){var cid=parseInt((document.getElementById('bk-child')||{}).value),ot=(document.getElementById('bk-type')||{}).value,ds=(document.getElementById('bk-start')||{}).value,de=(document.getElementById('bk-end')||{}).value||null,amt=parseFloat((document.getElementById('bk-amount')||{}).value);if(!ds){showToast('Укажите дату начала','error');return;}if(de&&ds>=de){showToast('Дата окончания должна быть позже начала','error');return;}try{await api('POST','/api/orders',{nanny_id:nid,child_id:cid,order_type:ot,date_start:ds,date_end:de,amount:amt});closeModal();showToast('✅ Заказ для '+nname+' создан!','success');afterRender(state.currentScreen);}catch(err){showToast(err.message,'error');}}
+async function acceptOrder(id){try{await api('PATCH','/api/orders/'+id+'/status',{status:'В процессе'});showToast('Заказ принят!','success');afterRender(state.currentScreen);}catch(err){showToast(err.message,'error');}}
+async function declineOrder(id){try{await api('PATCH','/api/orders/'+id+'/status',{status:'Отклонён'});showToast('Заказ отклонён');afterRender(state.currentScreen);}catch(err){showToast(err.message,'error');}}
+async function completeOrder(id){try{await api('PATCH','/api/orders/'+id+'/status',{status:'Завершён'});showToast('Заказ завершён!','success');afterRender(state.currentScreen);}catch(err){showToast(err.message,'error');}}
+async function verifyNanny(id,status){try{await api('PATCH','/api/nannies/'+id+'/verify',{status:status});showToast(status==='Верифицирована'?'Няня верифицирована!':'Статус обновлён',status==='Верифицирована'?'success':'');afterRender(state.currentScreen);}catch(err){showToast(err.message,'error');}}
+async function deleteUser(id,role,name){if(!confirm('Удалить "'+name+'"? Необратимо.'))return;try{await api('DELETE','/api/nannies/admin/users/'+role+'/'+id);showToast('Пользователь удалён');afterRender(state.currentScreen);}catch(err){showToast(err.message,'error');}}
+async function toggleAvailability(){try{var r=await api('PATCH','/api/nannies/me/availability');if(state.user)state.user.available=r.available;var b=document.getElementById('avail-btn'),ic=document.getElementById('avail-icon'),lb=document.getElementById('avail-label');if(b){b.className='toggle-avail-btn '+(r.available?'is-free':'is-busy');ic.textContent=r.available?'🟢':'🔴';lb.textContent=r.available?'Я свободна':'Я занята';}showToast(r.available?'Статус: Свободна':'Статус: Занята','success');}catch(err){showToast(err.message,'error');}}
+async function saveNannyProfile(){var exp=parseInt((document.getElementById('edit-exp')||{}).value),ph=((document.getElementById('edit-phone')||{}).value||'').trim();try{var u=await api('PATCH','/api/nannies/me/profile',{experience:exp,phone:ph});if(state.user){state.user.experience=u.experience;state.user.phone=u.phone;}var pe=document.getElementById('pf-exp'),pp=document.getElementById('pf-phone');if(pe)pe.textContent=u.experience+' лет';if(pp)pp.textContent=u.phone||'—';showToast('Профиль обновлён!','success');}catch(err){showToast(err.message,'error');}}
+async function submitReview(oid,nid){var r=parseInt((document.getElementById('rv-rating')||{}).value),t=((document.getElementById('rv-text')||{}).value||'').trim();try{await api('POST','/api/nannies/'+nid+'/review',{order_id:oid,rating:r,text:t});closeModal();showToast('Отзыв отправлен!','success');afterRender(state.currentScreen);}catch(err){showToast(err.message,'error');}}
+
+(async function init(){if(state.token){try{var d=await api('GET','/api/auth/me');state.user=d.user;state.role=d.role;await enterApp();}catch(e){localStorage.removeItem('sabi_token');state.token=null;}}})();
+document.getElementById('togglePassword').addEventListener('click',function(){var inp=document.getElementById('inp-password'),isP=inp.getAttribute('type')==='password';inp.setAttribute('type',isP?'text':'password');this.textContent=isP?'🙈':'👁️';});
+
+// ── NANNY EARNINGS STATS ──
+var _earningsPeriodMonths = 1;
+var _earningsCache = null; // cached transactions from API
+
+function setEarningsPeriod(months, btn) {
+  _earningsPeriodMonths = months;
+  // Update tab active state
+  document.querySelectorAll('.period-tab').forEach(function(b){ b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+  renderEarningsStats(_earningsCache);
+}
+
+function renderEarningsStats(transactions) {
+  _earningsCache = transactions;
+  var el = document.getElementById('earnings-stats');
+  if (!el) return;
+  if (!transactions || transactions.length === 0) {
+    el.innerHTML = '<div style="color:var(--text-muted);font-size:13px;grid-column:1/-1;padding:8px 0;">За этот период заказов нет</div>';
+    return;
+  }
+
+  // Filter by period
+  var now = new Date();
+  var filtered = transactions.filter(function(t) {
+    if (_earningsPeriodMonths === 0) return true; // all time
+    var d = new Date(t.created_at || t.date);
+    var diffMs = now - d;
+    var diffDays = diffMs / (1000 * 60 * 60 * 24);
+    return diffDays <= (_earningsPeriodMonths * 30.5);
+  });
+
+  var totalEarned = filtered.reduce(function(sum, t) {
+    return sum + parseFloat(t.nanny_amount || 0);
+  }, 0);
+  var ordersCount = filtered.length;
+  var avgEarned = ordersCount > 0 ? totalEarned / ordersCount : 0;
+
+  // Period label
+  var periodLabel = _earningsPeriodMonths === 0 ? 'За всё время'
+    : _earningsPeriodMonths === 1 ? 'За последний месяц'
+    : 'За последние 2 месяца';
+
+  el.innerHTML =
+    '<div class="earn-stat-card green">' +
+      '<div class="earn-stat-label">Заработано</div>' +
+      '<div class="earn-stat-val">' + fmt(totalEarned) + ' ₸</div>' +
+      '<div class="earn-stat-sub">' + periodLabel + '</div>' +
+    '</div>' +
+    '<div class="earn-stat-card blue">' +
+      '<div class="earn-stat-label">Выполнено заказов</div>' +
+      '<div class="earn-stat-val">' + ordersCount + '</div>' +
+      '<div class="earn-stat-sub">' + periodLabel + '</div>' +
+    '</div>' +
+    '<div class="earn-stat-card">' +
+      '<div class="earn-stat-label">Средний чек</div>' +
+      '<div class="earn-stat-val">' + fmt(Math.round(avgEarned)) + ' ₸</div>' +
+      '<div class="earn-stat-sub">на один заказ</div>' +
+    '</div>';
+}
+
+// ── NANNY SCHEDULE ──
+function buildNannyScheduleHTML(orders) {
+  var today = new Date(); today.setHours(0,0,0,0);
+  var days = [];
+  for (var i=0; i<7; i++) { var d=new Date(today); d.setDate(today.getDate()+i); days.push(d); }
+  var DN=['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+  var MN=['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
+  var byDay={};
+  (orders||[]).forEach(function(o){
+    if(!o.date_start||o.status==='Отклонён'||o.status==='Отклонено')return;
+    var ds=new Date(o.date_start), key=ds.toDateString();
+    if(!byDay[key])byDay[key]=[];
+    byDay[key].push(o);
+  });
+  var html='<div class="schedule-wrap">';
+  html+='<div class="schedule-legend"><span><span class="sleg-dot" style="background:#f48fb1;border:1px solid #e91e8c;"></span>Занятость</span><span><span class="sleg-dot" style="background:#a7e9c0;border:1px dashed #2e7d32;"></span>Свободно</span></div>';
+  html+='<div class="schedule-week">';
+  days.forEach(function(d){
+    var isToday=d.toDateString()===new Date().toDateString();
+    html+='<div class="schedule-day-label" style="'+(isToday?'color:var(--pink-600);':'')+'">'+DN[d.getDay()]+'<br><span style="font-size:13px;font-weight:400;">'+d.getDate()+' '+MN[d.getMonth()]+'</span></div>';
+  });
+  days.forEach(function(d){
+    html+='<div class="schedule-day-col">';
+    var dayOrders=byDay[d.toDateString()]||[];
+    if(!dayOrders.length){
+      html+='<div class="schedule-slot free-gap" style="text-align:center;">свободно</div>';
+    } else {
+      dayOrders.forEach(function(o){
+        var ds=new Date(o.date_start);
+        var de=o.date_end?new Date(o.date_end):null;
+        var t=ds.getHours().toString().padStart(2,'0')+':'+ds.getMinutes().toString().padStart(2,'0');
+        if(de)t+='–'+de.getHours().toString().padStart(2,'0')+':'+de.getMinutes().toString().padStart(2,'0');
+        html+='<div class="schedule-slot busy" title="'+(o.parent_name||'Родитель')+' · '+t+'">'+t+'<br>'+(o.parent_name?o.parent_name.split(' ')[0]:'#'+o.id)+'</div>';
+      });
+    }
+    html+='</div>';
+  });
+  html+='</div></div>';
+  return html;
+}
+
+async function loadNannySchedule(){
+  var el=document.getElementById('nanny-schedule-content');
+  if(!el)return;
+  try{var orders=await api('GET','/api/orders/my');el.innerHTML=buildNannyScheduleHTML(orders);}
+  catch(err){el.innerHTML='<div style="color:var(--text-muted);padding:16px;">Ошибка загрузки</div>';}
+}
+
+</script>
+</body>
+</html>
