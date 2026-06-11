@@ -19,14 +19,14 @@ router.get('/my', requireAuth, requireRole('parent'), async (req, res) => {
 // ── ДОБАВИТЬ РЕБЁНКА ──
 router.post('/', requireAuth, requireRole('parent'), async (req, res) => {
   const parent_id = req.session.user_id;
-  const { name, age, features } = req.body;
+  const { name, age, features, allergies, medications } = req.body;
   if (!name) return res.status(400).json({ error: 'Укажите имя ребёнка' });
   if (!age || isNaN(age) || age < 0 || age > 17)
     return res.status(400).json({ error: 'Укажите возраст от 0 до 17 лет' });
   try {
     const result = await pool.query(
-      `INSERT INTO children (parent_id, name, age, features) VALUES ($1,$2,$3,$4) RETURNING *`,
-      [parent_id, name, age, features || null]
+      `INSERT INTO children (parent_id, name, age, features, allergies, medications) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
+      [parent_id, name, age, features || null, allergies || null, medications || null]
     );
     console.log(`[CHILD] Добавлен ребёнок для parent_id=${parent_id}: ${name}`);
     res.status(201).json(result.rows[0]);
@@ -38,16 +38,18 @@ router.post('/', requireAuth, requireRole('parent'), async (req, res) => {
 // ── РЕДАКТИРОВАТЬ РЕБЁНКА ──
 router.patch('/:id', requireAuth, requireRole('parent'), async (req, res) => {
   const parent_id = req.session.user_id;
-  const { name, age, features } = req.body;
+  const { name, age, features, allergies, medications } = req.body;
   try {
     const result = await pool.query(
       `UPDATE children SET
-        name     = COALESCE($1, name),
-        age      = COALESCE($2, age),
-        features = COALESCE($3, features)
-       WHERE id = $4 AND parent_id = $5
+        name        = COALESCE($1, name),
+        age         = COALESCE($2, age),
+        features    = COALESCE($3, features),
+        allergies   = COALESCE($4, allergies),
+        medications = COALESCE($5, medications)
+       WHERE id = $6 AND parent_id = $7
        RETURNING *`,
-      [name, age, features, req.params.id, parent_id]
+      [name, age, features, allergies, medications, req.params.id, parent_id]
     );
     if (result.rows.length === 0)
       return res.status(404).json({ error: 'Ребёнок не найден' });

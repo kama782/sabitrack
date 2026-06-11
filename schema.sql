@@ -71,7 +71,6 @@ CREATE TABLE IF NOT EXISTS reviews (
   text TEXT,
   created_at TIMESTAMP DEFAULT NOW()
 );
-
 CREATE TABLE IF NOT EXISTS sessions (
   id SERIAL PRIMARY KEY,
   user_id INTEGER NOT NULL,

@@ -15,6 +15,7 @@ app.use('/api/children',  require('./routes/children'));
 app.use('/api/documents', require('./routes/documents'));
 app.use('/api/messages',  require('./routes/messages'));
 app.use('/api/wallet',    require('./routes/wallet'));
+app.use('/api/parents',   require('./routes/parents'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));

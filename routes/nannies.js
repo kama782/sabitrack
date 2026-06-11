@@ -79,15 +79,23 @@ router.patch('/me/availability', requireAuth, requireRole('nanny'), async (req, 
 // ── РЕДАКТИРОВАТЬ АНКЕТУ НЯНИ (только сама няня) ──
 router.patch('/me/profile', requireAuth, requireRole('nanny'), async (req, res) => {
   const nanny_id = req.session.user_id;
-  const { experience, phone } = req.body;
+  const { experience, phone, bio, exp_infants, exp_toddlers, exp_preschool, stop_factors, med_book_status, first_aid, hourly_rate } = req.body;
   try {
     const result = await pool.query(
       `UPDATE nannies SET
-        experience = COALESCE($1, experience),
-        phone      = COALESCE($2, phone)
-       WHERE id = $3
-       RETURNING id, name, email, phone, experience, status, rating, available`,
-      [experience, phone, nanny_id]
+        experience      = COALESCE($1, experience),
+        phone           = COALESCE($2, phone),
+        bio             = COALESCE($3, bio),
+        exp_infants     = COALESCE($4, exp_infants),
+        exp_toddlers    = COALESCE($5, exp_toddlers),
+        exp_preschool   = COALESCE($6, exp_preschool),
+        stop_factors    = COALESCE($7, stop_factors),
+        med_book_status = COALESCE($8, med_book_status),
+        first_aid       = COALESCE($9, first_aid),
+        hourly_rate     = COALESCE($10, hourly_rate)
+       WHERE id = $11
+       RETURNING *`,
+      [experience, phone, bio, exp_infants, exp_toddlers, exp_preschool, stop_factors, med_book_status, first_aid, hourly_rate, nanny_id]
     );
     res.json(result.rows[0]);
   } catch (err) {
