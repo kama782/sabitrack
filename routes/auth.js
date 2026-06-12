@@ -125,7 +125,7 @@ router.get('/me', async (req, res) => {
     const { user_id, role } = sess.rows[0];
     const tableMap = { parent: 'parents', nanny: 'nannies', admin: 'admins' };
     const userRes = await pool.query(
-      `SELECT id, name, email, phone FROM ${tableMap[role]} WHERE id = $1`, [user_id]
+      `SELECT * FROM ${tableMap[role]} WHERE id = $1`, [user_id]
     );
     res.json({ role, user: userRes.rows[0] });
   } catch (err) {

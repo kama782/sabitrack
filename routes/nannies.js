@@ -7,7 +7,7 @@ const { requireAuth, requireRole } = require('../middleware/auth');
 router.get('/', async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT id, name, phone, experience, status, rating, available
+      `SELECT id, name, phone, experience, status, rating, available, badge_identity, badge_background, badge_professional
        FROM nannies
        WHERE status = 'Верифицирована'
        ORDER BY rating DESC NULLS LAST`
@@ -22,7 +22,7 @@ router.get('/', async (req, res) => {
 router.get('/admin/users', requireAuth, requireRole('admin'), async (req, res) => {
   try {
     const parents = await pool.query(`SELECT id, name, email, phone, created_at FROM parents ORDER BY created_at DESC`);
-    const nannies = await pool.query(`SELECT id, name, email, phone, status, rating, experience, available, created_at FROM nannies ORDER BY created_at DESC`);
+    const nannies = await pool.query(`SELECT id, name, email, phone, status, rating, experience, available, badge_identity, badge_background, badge_professional, created_at FROM nannies ORDER BY created_at DESC`);
     res.json({ parents: parents.rows, nannies: nannies.rows });
   } catch (err) {
     res.status(500).json({ error: 'Ошибка сервера' });
@@ -54,6 +54,25 @@ router.patch('/:id/verify', requireAuth, requireRole('admin'), async (req, res) 
       [status, req.params.id]
     );
     console.log(`[ADMIN] Няня id=${req.params.id} → статус: ${status}`);
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// ── БЕЙДЖИ НЯНИ (только админ) ──
+router.patch('/:id/badges', requireAuth, requireRole('admin'), async (req, res) => {
+  const { badge_identity, badge_background, badge_professional } = req.body;
+  try {
+    const result = await pool.query(
+      `UPDATE nannies SET
+        badge_identity     = COALESCE($1, badge_identity),
+        badge_background   = COALESCE($2, badge_background),
+        badge_professional = COALESCE($3, badge_professional)
+       WHERE id = $4
+       RETURNING id, name, badge_identity, badge_background, badge_professional`,
+      [badge_identity, badge_background, badge_professional, req.params.id]
+    );
     res.json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ error: 'Ошибка сервера' });
