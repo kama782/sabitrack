@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 const { requireAuth, requireRole } = require('../middleware/auth');
+const { checkAndAwardBadges } = require('../achievements-helper');
 
 // ── СОЗДАТЬ ЗАКАЗ (только родитель) ──
 router.post('/', requireAuth, requireRole('parent'), async (req, res) => {
@@ -168,7 +169,11 @@ router.patch('/:id/status', async (req, res) => {
       await pool.query(rejectSql, [nanny_id, id, date_end, date_start]);
     }
 
-    res.json(acceptedOrder);
+    if (status === 'Завершён') {
+  checkAndAwardBadges(acceptedOrder.nanny_id, 'nanny');
+  checkAndAwardBadges(acceptedOrder.parent_id, 'parent');
+}
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Ошибка сервера' });
