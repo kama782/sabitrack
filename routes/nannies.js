@@ -7,7 +7,7 @@ const { requireAuth, requireRole } = require('../middleware/auth');
 router.get('/', async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT id, name, phone, experience, status, rating, available, badge_identity, badge_background, badge_professional
+      `SELECT id, name, phone, experience, status, rating, available, badge_identity, badge_background, badge_professional, video_presentation
        FROM nannies
        WHERE status = 'Верифицирована'
        ORDER BY rating DESC NULLS LAST`
@@ -117,6 +117,50 @@ router.patch('/me/profile', requireAuth, requireRole('nanny'), async (req, res) 
       [experience, phone, bio, exp_infants, exp_toddlers, exp_preschool, stop_factors, med_book_status, first_aid, hourly_rate, nanny_id]
     );
     res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// ── ЗАГРУЗКА ВИДЕО-ВИЗИТКИ ──
+const multerVideo = require('multer');
+const pathV = require('path');
+const fsV = require('fs');
+
+const videoDir = pathV.join(__dirname, '../public/uploads/videos');
+if (!fsV.existsSync(videoDir)) fsV.mkdirSync(videoDir, { recursive: true });
+
+const videoStorage = multerVideo.diskStorage({
+  destination: (req, file, cb) => cb(null, videoDir),
+  filename: (req, file, cb) => {
+    const ext = pathV.extname(file.originalname);
+    cb(null, `video_${req.session.user_id}_${Date.now()}${ext}`);
+  }
+});
+
+const uploadVideo = multerVideo({
+  storage: videoStorage,
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
+  fileFilter: (req, file, cb) => {
+    const allowed = /mp4|mov|avi|webm/;
+    if (allowed.test(pathV.extname(file.originalname).toLowerCase())) {
+      cb(null, true);
+    } else {
+      cb(new Error('Только видео файлы'));
+    }
+  }
+});
+
+router.post('/me/video', requireAuth, requireRole('nanny'), uploadVideo.single('video'), async (req, res) => {
+  const nanny_id = req.session.user_id;
+  if (!req.file) return res.status(400).json({ error: 'Видео не загружено' });
+  try {
+    const video_url = `/uploads/videos/${req.file.filename}`;
+    await pool.query(
+      `UPDATE nannies SET video_presentation = $1 WHERE id = $2`,
+      [video_url, nanny_id]
+    );
+    res.json({ video_url });
   } catch (err) {
     res.status(500).json({ error: 'Ошибка сервера' });
   }
