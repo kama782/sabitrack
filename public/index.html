@@ -543,7 +543,7 @@ function renderScreen(id){
       '<div style="margin-top:28px;"><div class="sec-head"><div class="sec-title">История операций</div></div><div id="tx-history"><div style="color:var(--text-muted);">Загрузка...</div></div></div>';
   }
 
-  if(id==='admin-home')return '<div class="greeting"><h1>Панель <span>администратора</span></h1></div><div class="stat-grid"><div class="stat-card"><div class="stat-label">Всего нянь</div><div class="stat-value" id="st-nannies">—</div><div class="stat-sub" id="st-nannies-v">верифицировано</div></div><div class="stat-card"><div class="stat-label">Родителей</div><div class="stat-value" id="st-parents">—</div></div><div class="stat-card"><div class="stat-label">Заказов всего</div><div class="stat-value" id="st-orders">—</div></div></div><div class="sec-head"><div class="sec-title">Ожидают верификации</div><a class="sec-link" onclick="showScreen(\'admin-verify\')">Все →</a></div><div id="pending-nannies"><div style="color:var(--text-muted);">Загрузка...</div></div>';
+  if(id==='admin-home')return '<div class="greeting"><h1>Панель <span>администратора</span></h1></div><div class="stat-grid"><div class="stat-card"><div class="stat-label">Всего нянь</div><div class="stat-value" id="st-nannies">—</div><div class="stat-sub" id="st-nannies-v">верифицировано</div></div><div class="stat-card"><div class="stat-label">Родителей</div><div class="stat-value" id="st-parents">—</div></div><div class="stat-card"><div class="stat-label">Заказов всего</div><div class="stat-value" id="st-orders">—</div></div><div class="stat-card"><div class="stat-label">Оплачено заказов</div><div class="stat-value" id="st-paid">—</div></div><div class="stat-card"><div class="stat-label">Общий оборот</div><div class="stat-value" id="st-revenue" style="font-size:22px;">—</div></div><div class="stat-card"><div class="stat-label">Комиссия платформы</div><div class="stat-value" id="st-fees" style="font-size:22px;">—</div></div></div><div class="sec-head"><div class="sec-title">Топ нянь</div></div><div id="top-nannies-list" style="margin-bottom:24px;"></div><div class="sec-head"><div class="sec-title">Заказы за 7 дней</div></div><div id="orders-chart" style="background:#fff;border-radius:var(--r-lg);border:1px solid var(--border);padding:20px;margin-bottom:24px;"></div><div class="sec-head"><div class="sec-title">Ожидают верификации</div><a class="sec-link" onclick="showScreen(\'admin-verify\')">Все →</a></div><div id="pending-nannies"><div style="color:var(--text-muted);">Загрузка...</div></div>';
   if(id==='admin-users')return '<div class="greeting"><h1>Все <span>пользователи</span></h1></div><div id="users-table"><div style="color:var(--text-muted);">Загрузка...</div></div>';
   if(id==='admin-verify')return '<div class="greeting"><h1>Верификация <span>нянь</span></h1></div><div id="verify-table"><div style="color:var(--text-muted);">Загрузка...</div></div>';
   if(id==='admin-orders')return '<div class="greeting"><h1>Все <span>заказы</span></h1></div><div id="all-orders-table"><div style="color:var(--text-muted);">Загрузка...</div></div>';
@@ -577,7 +577,23 @@ async function afterRender(id){
     if(id==='nanny-docs'){renderMyDocs();}
     if(id==='chats'){renderChatsList();}
     if(id==='wallet'){await loadWalletScreen();}
-    if(id==='admin-home'||id==='admin-users'||id==='admin-verify'){var data=await api('GET','/api/nannies/admin/users');if(id==='admin-home'){document.getElementById('st-nannies').textContent=data.nannies.length;document.getElementById('st-nannies-v').textContent=data.nannies.filter(function(n){return n.status==='Верифицирована';}).length+' верифицировано';document.getElementById('st-parents').textContent=data.parents.length;var ao=await api('GET','/api/orders/all');document.getElementById('st-orders').textContent=ao.length;var pend=data.nannies.filter(function(n){return n.status==='На проверке';});document.getElementById('pending-nannies').innerHTML=pend.length?pend.map(pendingNannyCard).join(''):'<div style="color:var(--text-muted);padding:16px;">Ожидающих нет</div>';}if(id==='admin-users')renderUsersTable(data);if(id==='admin-verify')renderVerifyTable(data.nannies);}
+   if(id==='admin-home'){
+  var data=await api('GET','/api/nannies/admin/users');
+  document.getElementById('st-nannies').textContent=data.nannies.length;
+  document.getElementById('st-nannies-v').textContent=data.nannies.filter(function(n){return n.status==='Верифицирована';}).length+' верифицировано';
+  document.getElementById('st-parents').textContent=data.parents.length;
+  var stats=await api('GET','/api/orders/stats');
+  document.getElementById('st-orders').textContent=stats.total_orders;
+  document.getElementById('st-paid').textContent=stats.paid_orders;
+  document.getElementById('st-revenue').textContent=fmt(stats.total_revenue)+' ₸';
+  document.getElementById('st-fees').textContent=fmt(stats.total_fees)+' ₸';
+  var pend=data.nannies.filter(function(n){return n.status==='На проверке';});
+  document.getElementById('pending-nannies').innerHTML=pend.length?pend.map(pendingNannyCard).join(''):'<div style="color:var(--text-muted);padding:16px;">Ожидающих нет</div>';
+  var topEl=document.getElementById('top-nannies-list');
+  topEl.innerHTML=stats.top_nannies.length?'<table class="admin-tbl"><thead><tr><th>#</th><th>Няня</th><th>Рейтинг</th><th>Заказов</th></tr></thead><tbody>'+stats.top_nannies.map(function(n,i){return '<tr><td>'+(i+1)+'</td><td>'+n.name+'</td><td>'+starsHTML(n.rating)+'</td><td>'+n.orders_count+'</td></tr>';}).join('')+'</tbody></table>':'<div style="color:var(--text-muted);padding:16px;">Нет данных</div>';
+  var chartEl=document.getElementById('orders-chart');
+  if(stats.orders_by_day.length){var max=Math.max.apply(null,stats.orders_by_day.map(function(d){return d.count;}));chartEl.innerHTML='<div style="display:flex;align-items:flex-end;gap:8px;height:100px;">'+stats.orders_by_day.map(function(d){var h=Math.max(10,Math.round((d.count/max)*80));return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;"><div style="width:100%;height:'+h+'px;background:var(--pink-400);border-radius:4px;"></div><div style="font-size:10px;color:var(--text-muted);">'+new Date(d.day).toLocaleDateString('ru',{day:'numeric',month:'short'})+'</div><div style="font-size:11px;font-weight:600;">'+d.count+'</div></div>';}).join('')+'</div>';}else{chartEl.innerHTML='<div style="color:var(--text-muted);text-align:center;padding:20px;">Нет данных за последние 7 дней</div>';}
+}
     if(id==='admin-orders'){var ao=await api('GET','/api/orders/all');renderAllOrdersTable(ao);}
   }catch(err){console.error('[SabiTrack]',err);showToast('Ошибка: '+err.message,'error');}
 }
