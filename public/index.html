@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SabiTrack — Поиск нянь</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 :root{--pink-50:#fff5f7;--pink-100:#ffe4eb;--pink-200:#ffc2d1;--pink-400:#ff6b96;--pink-500:#e84a78;--pink-600:#c73461;--pink-700:#9c2248;--cream:#fdf8f9;--text-dark:#2d1a22;--text-mid:#6b3d52;--text-muted:#a07080;--border:rgba(200,120,150,0.18);--border-strong:rgba(200,120,150,0.32);--shadow-soft:0 2px 20px rgba(180,80,120,0.07);--shadow-card:0 4px 32px rgba(180,80,120,0.11);--r-sm:10px;--r-md:14px;--r-lg:20px;--r-xl:28px;}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -460,8 +462,6 @@ textarea.form-input{resize:vertical;min-height:72px;}
   </div>
 </div>
 
-<div id="wallet-balance-display" class="...">0 ₸</div>
-<div id="wallet-actions"></div> ```
 
 <script>
 var API='';
@@ -493,8 +493,8 @@ async function enterApp(){document.getElementById('page-login').style.display='n
 async function doLogout(){stopChatPoll();try{await api('POST','/api/auth/logout');}catch(e){}localStorage.removeItem('sabi_token');state.token=null;state.role=null;state.user=null;state.children=[];state.balance=0;document.getElementById('page-app').style.display='none';document.getElementById('page-login').style.display='flex';showToast('Вы вышли из системы');}
 
 var NAV={
-  parent:[{l:'Главная',i:'🏠',s:'parent-home'},{l:'Найти няню',i:'🔍',s:'search'},{l:'Мои заказы',i:'📋',s:'orders'},{l:'Кошелёк',i:'💰',s:'wallet'},{l:'Сообщения',i:'💬',s:'chats'},{l:'Профиль',i:'👤',s:'parent-profile'}],
-  nanny: [{l:'Главная',i:'🏠',s:'nanny-home'},{l:'Мои заказы',i:'📋',s:'nanny-orders'},{l:'Расписание',i:'📅',s:'nanny-schedule'},{l:'Кошелёк',i:'💰',s:'wallet'},{l:'Сообщения',i:'💬',s:'chats'},{l:'Документы',i:'📄',s:'nanny-docs'},{l:'Профиль',i:'👤',s:'nanny-profile'}],
+  parent:[{l:'Главная',i:'🏠',s:'parent-home'},{l:'Найти няню',i:'🔍',s:'search'},{l:'Мои заказы',i:'📋',s:'orders'},{l:'Кошелёк',i:'💰',s:'wallet'},{l:'Сообщения',i:'💬',s:'chats'},{l:'Карта',i:'🗺️',s:'parent-map'},{l:'Профиль',i:'👤',s:'parent-profile'}],
+  nanny: [{l:'Главная',i:'🏠',s:'nanny-home'},{l:'Мои заказы',i:'📋',s:'nanny-orders'},{l:'Расписание',i:'📅',s:'nanny-schedule'},{l:'Кошелёк',i:'💰',s:'wallet'},{l:'Сообщения',i:'💬',s:'chats'},{l:'Карта',i:'🗺️',s:'nanny-map'},{l:'Документы',i:'📄',s:'nanny-docs'},{l:'Профиль',i:'👤',s:'nanny-profile'}],
   admin: [{l:'Дашборд',i:'📊',s:'admin-home'},{l:'Пользователи',i:'👥',s:'admin-users'},{l:'Верификация',i:'✅',s:'admin-verify'},{l:'Все заказы',i:'📋',s:'admin-orders'},{l:'Финансы',i:'💹',s:'wallet'}],
 };
 function buildSidebar(role){var items=NAV[role]||[];document.getElementById('sidebar').innerHTML='<div class="nav-section">Меню</div>'+items.map(function(it){return '<button class="nav-item" data-screen="'+it.s+'" onclick="showScreen(\''+it.s+'\')">'+'<span class="nav-icon">'+it.i+'</span>'+it.l+'</button>';}).join('');if(items[0])showScreen(items[0].s);}
@@ -523,6 +523,8 @@ function renderScreen(id){
   if(id==='nanny-schedule')return '<div class="greeting"><h1>Моё <span>расписание</span></h1><p>Ближайшие 7 дней · интервал между заказами — 30 мин</p></div><div id="nanny-schedule-content"><div style="color:var(--text-muted);">Загрузка...</div></div>';
   if(id==='nanny-docs')return '<div class="greeting"><h1>Мои <span>документы</span></h1><p>Загрузите дипломы и сертификаты для верификации</p></div><div style="margin-bottom:20px;"><button class="btn btn-primary" onclick="showUploadDocModal()">📎 Загрузить документ</button></div><div id="docs-list"><div style="color:var(--text-muted);">Загрузка...</div></div>';
   if(id==='nanny-profile'){var isAvail=u.available;return '<div class="greeting"><h1>Мой <span>профиль</span></h1></div><div id="achievements-bar" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;"></div><div class="profile-card"><div class="profile-head"><div class="nanny-avatar '+uav+' profile-avatar-lg">'+uini+'</div><div><div class="profile-name">'+(u.name||'—')+'</div><div class="profile-role-label">Няня · '+badge(u.status||'На проверке')+'</div></div></div><button id="avail-btn" class="toggle-avail-btn '+(isAvail?'is-free':'is-busy')+'" onclick="toggleAvailability()"><span id="avail-icon">'+(isAvail?'🟢':'🔴')+'</span><span id="avail-label">'+(isAvail?'Я свободна':'Я занята')+'</span></button><div class="divider"></div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">'+(u.badge_identity?'<span style="background:#e8f5e9;color:#2e7d32;padding:4px 10px;border-radius:20px;font-size:13px;">🪪 Личность подтверждена</span>':'')+(u.badge_background?'<span style="background:#e3f2fd;color:#1565c0;padding:4px 10px;border-radius:20px;font-size:13px;">🔍 Проверено по базам</span>':'')+(u.badge_professional?'<span style="background:#fff8e1;color:#e65100;padding:4px 10px;border-radius:20px;font-size:13px;">🏆 Проф. пригодность</span>':'')+'</div><div class="field-row"><span class="field-label">Опыт</span><span class="field-val" id="pf-exp">'+(u.experience||0)+' лет</span></div><div class="field-row"><span class="field-label">Рейтинг</span><span class="field-val">'+starsHTML(u.rating)+'</span></div><div class="field-row"><span class="field-label">Телефон</span><span class="field-val" id="pf-phone">'+(u.phone||'—')+'</span></div><div class="field-row"><span class="field-label">Email</span><span class="field-val">'+(u.email||'—')+'</span></div><div class="divider"></div><div class="edit-profile-form"><div style="font-weight:600;margin-bottom:14px;">Редактировать анкету</div><div class="form-group"><label class="form-label">О себе</label><textarea class="form-input" id="edit-bio" placeholder="Расскажите о себе, своём подходе к детям...">'+(u.bio||'')+'</textarea></div><div class="form-group"><label class="form-label">Опыт (лет)</label><input class="form-input" id="edit-exp" type="number" value="'+(u.experience||0)+'" min="0" max="50"></div><div class="form-group"><label class="form-label">Ставка (₸/час)</label><input class="form-input" id="edit-rate" type="number" value="'+(u.hourly_rate||0)+'" min="0"></div><div class="form-group"><label class="form-label">Телефон</label><input class="form-input" id="edit-phone" type="tel" value="'+(u.phone||'')+'"></div><div style="font-weight:600;margin:14px 0 10px;">👶 Опыт по возрастам (лет)</div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px;"><div><label class="form-label">Груднички (0-1)</label><input class="form-input" id="edit-exp-infants" type="number" value="'+(u.exp_infants||0)+'" min="0"></div><div><label class="form-label">Тоддлеры (1-3)</label><input class="form-input" id="edit-exp-toddlers" type="number" value="'+(u.exp_toddlers||0)+'" min="0"></div><div><label class="form-label">Дошкольники (3-6)</label><input class="form-input" id="edit-exp-preschool" type="number" value="'+(u.exp_preschool||0)+'" min="0"></div></div><div class="form-group"><label class="form-label">🚫 Стоп-факторы (с чем не работаю)</label><textarea class="form-input" id="edit-stop" placeholder="Например: не готовлю еду, не сижу с больными детьми...">'+(u.stop_factors||'')+'</textarea></div<div class="form-group"><label class="form-label">📋 Медицинская книжка</label><div style="display:flex;align-items:center;gap:10px;"><button class="btn btn-sm" onclick="showUploadDocModal()">📎 Загрузить медкнижку</button><span style="font-size:13px;color:var(--text-muted);">Загрузите скан или фото</span></div></div><div class="form-group"><label style="display:flex;align-items:center;gap:10px;cursor:pointer;"><input type="checkbox" id="edit-firstaid" '+(u.first_aid?'checked':'')+' style="width:18px;height:18px;accent-color:var(--pink-500);"><span class="form-label" style="margin:0;">🏥 Прошла курсы первой помощи (First Aid)</span></label></div><button class="btn btn-primary btn-block" onclick="saveNannyProfile()">Сохранить изменения</button></div><div style="margin-top:18px;"><button class="btn btn-block" onclick="showScreen(\'nanny-docs\')">📄 Управление документами</button></div><div style="margin-top:10px;"><div style="font-weight:600;margin-bottom:10px;">🎬 Видео-визитка</div>'+(u.video_presentation?'<video src="'+u.video_presentation+'" controls style="width:100%;border-radius:var(--r-lg);margin-bottom:10px;max-height:200px;"></video>':'<div style="color:var(--text-muted);font-size:13px;margin-bottom:10px;">Видео не загружено</div>')+'<input type="file" id="video-file" accept="video/*" style="display:none" onchange="uploadVideo(event)"><button class="btn btn-block" onclick="document.getElementById(\'video-file\').click()">📹 Загрузить видео (до 1 мин)</button></div></div></div>';}
+  if(id==='nanny-map')return '<div class="greeting"><h1>Моё <span>местоположение</span></h1><p>Поделитесь локацией с родителем</p></div><div id="nanny-map-container" style="height:400px;border-radius:var(--r-lg);overflow:hidden;margin-bottom:16px;"></div><div style="display:flex;gap:10px;flex-wrap:wrap;"><button class="btn btn-primary" onclick="startTracking()">📍 Поделиться локацией</button><button class="btn" onclick="stopTracking()">⛔ Остановить</button></div><div id="tracking-status" style="margin-top:12px;font-size:14px;color:var(--text-muted);"></div>';
+  if(id==='parent-map')return '<div class="greeting"><h1>Где <span>няня?</span></h1><p>Местоположение няни в реальном времени</p></div><div id="parent-map-container" style="height:400px;border-radius:var(--r-lg);overflow:hidden;margin-bottom:16px;"></div><div id="nanny-status-info" style="font-size:14px;color:var(--text-muted);padding:12px;background:#fff;border-radius:var(--r-lg);border:1px solid var(--border);">Загрузка...</div>';
   if(id==='chats')return '<div class="greeting"><h1>Сообщения</h1><p>Чаты по активным заказам</p></div><div id="chats-list"><div style="color:var(--text-muted);">Загрузка...</div></div>';
 
   // ── КОШЕЛЁК ──
@@ -575,6 +577,8 @@ async function afterRender(id){
     if(id==='nanny-profile'||id==='parent-profile'){try{var ach=await api('GET','/api/achievements/my');var pts=await api('GET','/api/achievements/points');var bar=document.getElementById('achievements-bar');if(bar){bar.innerHTML='<span style="background:#fff8e1;color:#e65100;padding:4px 12px;border-radius:20px;font-size:13px;font-weight:600;">🏅 '+pts.points+' баллов</span>'+(ach.length?ach.map(function(a){return '<span style="background:#f3f0ff;color:#5b21b6;padding:4px 12px;border-radius:20px;font-size:13px;">'+a.badge_icon+' '+a.badge_name+'</span>';}).join(''):'<span style="color:var(--text-muted);font-size:13px;">Пока нет достижений</span>');}}catch(e){}}
     if(id==='nanny-schedule'){loadNannySchedule();}
     if(id==='nanny-docs'){renderMyDocs();}
+    if(id==='nanny-map'){initNannyMap();}
+    if(id==='parent-map'){initParentMap();}
     if(id==='chats'){renderChatsList();}
     if(id==='wallet'){await loadWalletScreen();}
    if(id==='admin-home'){
@@ -1009,6 +1013,72 @@ function buildNannyScheduleHTML(orders) {
   });
   html+='</div></div>';
   return html;
+}
+
+var _nannyMap=null,_parentMap=null,_trackingTimer=null,_nannyMarker=null;
+
+function initNannyMap(){
+  if(_nannyMap){_nannyMap.remove();_nannyMap=null;}
+  var el=document.getElementById('nanny-map-container');
+  if(!el)return;
+  _nannyMap=L.map('nanny-map-container').setView([51.1801,71.4460],13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(_nannyMap);
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(function(pos){
+      var lat=pos.coords.latitude,lng=pos.coords.longitude;
+      _nannyMap.setView([lat,lng],15);
+      _nannyMarker=L.marker([lat,lng]).addTo(_nannyMap).bindPopup('Вы здесь').openPopup();
+    });
+  }
+}
+
+async function startTracking(){
+  if(!navigator.geolocation){showToast('Геолокация недоступна','error');return;}
+  document.getElementById('tracking-status').textContent='🟢 Локация передаётся родителю...';
+  _trackingTimer=setInterval(function(){
+    navigator.geolocation.getCurrentPosition(async function(pos){
+      var lat=pos.coords.latitude,lng=pos.coords.longitude;
+      if(_nannyMarker)_nannyMarker.setLatLng([lat,lng]);
+      else if(_nannyMap)_nannyMarker=L.marker([lat,lng]).addTo(_nannyMap).bindPopup('Вы здесь').openPopup();
+      try{await api('POST','/api/location/update',{latitude:lat,longitude:lng,status:'На прогулке'});}catch(e){}
+    });
+  },10000);
+  navigator.geolocation.getCurrentPosition(async function(pos){
+    await api('POST','/api/location/update',{latitude:pos.coords.latitude,longitude:pos.coords.longitude,status:'На прогулке'});
+  });
+  showToast('Локация передаётся!','success');
+}
+
+function stopTracking(){
+  if(_trackingTimer){clearInterval(_trackingTimer);_trackingTimer=null;}
+  document.getElementById('tracking-status').textContent='⛔ Передача остановлена';
+  showToast('Передача локации остановлена');
+}
+
+async function initParentMap(){
+  if(_parentMap){_parentMap.remove();_parentMap=null;}
+  var el=document.getElementById('parent-map-container');
+  if(!el)return;
+  _parentMap=L.map('parent-map-container').setView([51.1801,71.4460],13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(_parentMap);
+  try{
+    var orders=await api('GET','/api/orders/my');
+    var active=orders.filter(function(o){return o.status==='В процессе'||o.status==='Подтверждён';});
+    if(!active.length){document.getElementById('nanny-status-info').textContent='Нет активных заказов';return;}
+    var nannyId=active[0].nanny_id;
+    var loc=await api('GET','/api/location/nanny/'+nannyId);
+    var lat=parseFloat(loc.latitude),lng=parseFloat(loc.longitude);
+    _parentMap.setView([lat,lng],15);
+    L.marker([lat,lng]).addTo(_parentMap).bindPopup('🧑‍🍼 '+loc.nanny_name+' · '+loc.status).openPopup();
+    document.getElementById('nanny-status-info').textContent='📍 '+loc.nanny_name+' · Статус: '+loc.status+' · Обновлено: '+fmtTime(loc.updated_at);
+    setInterval(async function(){
+      try{
+        var l=await api('GET','/api/location/nanny/'+nannyId);
+        _parentMap.setView([parseFloat(l.latitude),parseFloat(l.longitude)],15);
+        document.getElementById('nanny-status-info').textContent='📍 '+l.nanny_name+' · Статус: '+l.status+' · Обновлено: '+fmtTime(l.updated_at);
+      }catch(e){}
+    },15000);
+  }catch(err){document.getElementById('nanny-status-info').textContent='Няня ещё не поделилась локацией';}
 }
 
 async function loadNannySchedule(){

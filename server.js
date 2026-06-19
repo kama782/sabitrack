@@ -17,6 +17,7 @@ app.use('/api/messages',  require('./routes/messages'));
 app.use('/api/wallet',    require('./routes/wallet'));
 app.use('/api/parents',   require('./routes/parents'));
 app.use('/api/achievements', require('./routes/achievements'));
+app.use('/api/location', require('./routes/location'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
